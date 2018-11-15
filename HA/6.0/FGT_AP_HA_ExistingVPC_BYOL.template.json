@@ -7,13 +7,13 @@
 					"Label": {
 						"default": "VPC Configuration"
 					},
-					"Parameters": ["VPCCIDR", "PublicSubnet", "PrivateSubnet", "HAsyncSubnet", "HAmgmtSubnet"]
+					"Parameters": ["VPCID", "VPCCIDR", "PublicSubnet", "PrivateSubnet", "HAsyncSubnet", "HAmgmtSubnet"]
 				},
 				{
 					"Label": {
 						"default": "FortiGate Instance Configuration"
 					},
-					"Parameters": ["InstanceType", "CIDRForInstanceAccess", "AZForInstances", "KeyPair", "FortiGate1LicenseFile", "FortiGate2LicenseFile", "PublicSubnetRouterIP",  "PrivateSubnetRouterIP", "HAmgmtSubnetRouterIP"]
+					"Parameters": ["InstanceType", "CIDRForInstanceAccess", "AZForInstances", "KeyPair", "FortiGate1LicenseFile", "FortiGate2LicenseFile", "PublicSubnetRouterIP", "PrivateSubnetRouterIP", "HAmgmtSubnetRouterIP"]
 				},
 				{
 					"Label": {
@@ -37,30 +37,30 @@
 		}
 	},
 	"Parameters": {
+		"VPCID": {
+			"Type": "AWS::EC2::VPC::Id",
+			"Description": "Select the VPC to use"
+		},
 		"VPCCIDR": {
 			"Type": "String",
 			"Default": "192.168.0.0/16",
 			"Description": "Provide a network CIDR for the VPC"
 		},
 		"PublicSubnet": {
-			"Type": "String",
-			"Default": "192.168.1.0/24",
-			"Description": "Provide a network CIDR for the PublicSubnet"
+			"Type": "AWS::EC2::Subnet::Id",
+			"Description": "Select the subnet for the PublicSubnet"
 		},
 		"PrivateSubnet": {
-			"Type": "String",
-			"Default": "192.168.2.0/24",
-			"Description": "Provide a network CIDR for the PrivateSubnet"
+			"Type": "AWS::EC2::Subnet::Id",
+			"Description": "Select the subnet for the  PrivateSubnet"
 		},
 		"HAsyncSubnet": {
-			"Type": "String",
-			"Default": "192.168.3.0/24",
-			"Description": "Provide a network CIDR for the HAsyncSubnet"
+			"Type": "AWS::EC2::Subnet::Id",
+			"Description": "Select the subnet for the  HAsyncSubnet"
 		},
 		"HAmgmtSubnet": {
-			"Type": "String",
-			"Default": "192.168.4.0/24",
-			"Description": "Provide a network CIDR for the HAmgmtSubnet"
+			"Type": "AWS::EC2::Subnet::Id",
+			"Description": "Select the subnet for the  HAmgmtSubnet"
 		},
 		"PublicSubnetRouterIP": {
 			"Type": "String",
@@ -256,264 +256,11 @@
 				}]
 			}
 		},
-		"VPC": {
-			"Type": "AWS::EC2::VPC",
-			"Properties": {
-				"EnableDnsSupport": "true",
-				"EnableDnsHostnames": "true",
-				"CidrBlock": {
-					"Ref": "VPCCIDR"
-				},
-				"Tags": [{
-					"Key": "Name",
-					"Value": {
-						"Fn::Join": [
-							"", [{
-									"Ref": "AWS::StackName"
-								},
-								"-VPC"
-							]
-						]
-					}
-				}]
-			}
-		},
-		"Subnet1": {
-			"Type": "AWS::EC2::Subnet",
-			"Properties": {
-				"VpcId": {
-					"Ref": "VPC"
-				},
-				"CidrBlock": {
-					"Ref": "PublicSubnet"
-				},
-				"AvailabilityZone": {
-					"Ref": "AZForInstances"
-				},
-				"Tags": [{
-					"Key": "Name",
-					"Value": {
-						"Fn::Join": [
-							"", [{
-									"Ref": "AWS::StackName"
-								},
-								"-PublicSubnet"
-							]
-						]
-					}
-				}]
-			}
-		},
-		"Subnet2": {
-			"Type": "AWS::EC2::Subnet",
-			"Properties": {
-				"VpcId": {
-					"Ref": "VPC"
-				},
-				"CidrBlock": {
-					"Ref": "PrivateSubnet"
-				},
-				"AvailabilityZone": {
-					"Ref": "AZForInstances"
-				},
-				"Tags": [{
-					"Key": "Name",
-					"Value": {
-						"Fn::Join": [
-							"", [{
-									"Ref": "AWS::StackName"
-								},
-								"-PrivateSubnet"
-							]
-						]
-					}
-				}]
-			}
-		},
-		"Subnet3": {
-			"Type": "AWS::EC2::Subnet",
-			"Properties": {
-				"VpcId": {
-					"Ref": "VPC"
-				},
-				"CidrBlock": {
-					"Ref": "HAsyncSubnet"
-				},
-				"AvailabilityZone": {
-					"Ref": "AZForInstances"
-				},
-				"Tags": [{
-					"Key": "Name",
-					"Value": {
-						"Fn::Join": [
-							"", [{
-									"Ref": "AWS::StackName"
-								},
-								"-HAsyncSubnet"
-							]
-						]
-					}
-				}]
-			}
-		},
-		"Subnet4": {
-			"Type": "AWS::EC2::Subnet",
-			"Properties": {
-				"VpcId": {
-					"Ref": "VPC"
-				},
-				"CidrBlock": {
-					"Ref": "HAmgmtSubnet"
-				},
-				"AvailabilityZone": {
-					"Ref": "AZForInstances"
-				},
-				"Tags": [{
-					"Key": "Name",
-					"Value": {
-						"Fn::Join": [
-							"", [{
-									"Ref": "AWS::StackName"
-								},
-								"-HAmgmtSubnet"
-							]
-						]
-					}
-				}]
-			}
-		},
-		"InternetGateway": {
-			"Type": "AWS::EC2::InternetGateway",
-			"Properties": {
-				"Tags": [{
-					"Key": "Name",
-					"Value": {
-						"Fn::Join": [
-							"", [{
-									"Ref": "AWS::StackName"
-								},
-								"-IGW"
-							]
-						]
-					}
-				}]
-			}
-		},
-		"AttachGateway": {
-			"Type": "AWS::EC2::VPCGatewayAttachment",
-			"Properties": {
-				"VpcId": {
-					"Ref": "VPC"
-				},
-				"InternetGatewayId": {
-					"Ref": "InternetGateway"
-				}
-			}
-		},
-		"RouteTable": {
-			"Type": "AWS::EC2::RouteTable",
-			"Properties": {
-				"VpcId": {
-					"Ref": "VPC"
-				},
-				"Tags": [{
-					"Key": "Name",
-					"Value": {
-						"Fn::Join": [
-							"", [{
-									"Ref": "AWS::StackName"
-								},
-								"-PublicRouteTable"
-							]
-						]
-					}
-				}]
-			}
-		},
-		"RouteTable1": {
-			"Type": "AWS::EC2::RouteTable",
-			"Properties": {
-				"VpcId": {
-					"Ref": "VPC"
-				},
-				"Tags": [{
-					"Key": "Name",
-					"Value": {
-						"Fn::Join": [
-							"", [{
-									"Ref": "AWS::StackName"
-								},
-								"-PrivateRouteTable"
-							]
-						]
-					}
-				}]
-			}
-		},
-		"Route1": {
-			"Type": "AWS::EC2::Route",
-			"DependsOn": "AttachGateway",
-			"Properties": {
-				"RouteTableId": {
-					"Ref": "RouteTable"
-				},
-				"DestinationCidrBlock": "0.0.0.0/0",
-				"GatewayId": {
-					"Ref": "InternetGateway"
-				}
-			}
-		},
-		"Route2": {
-			"Type": "AWS::EC2::Route",
-			"DependsOn": "AttachGateway",
-			"Properties": {
-				"RouteTableId": {
-					"Ref": "RouteTable1"
-				},
-				"DestinationCidrBlock": "0.0.0.0/0",
-				"NetworkInterfaceId": {
-					"Ref": "fgt1eni1"
-				}
-			}
-		},
-		"SubnetRouteTableAssociation1": {
-			"Type": "AWS::EC2::SubnetRouteTableAssociation",
-			"Properties": {
-				"SubnetId": {
-					"Ref": "Subnet1"
-				},
-				"RouteTableId": {
-					"Ref": "RouteTable"
-				}
-			}
-		},
-		"SubnetRouteTableAssociation2": {
-			"Type": "AWS::EC2::SubnetRouteTableAssociation",
-			"Properties": {
-				"SubnetId": {
-					"Ref": "Subnet4"
-				},
-				"RouteTableId": {
-					"Ref": "RouteTable"
-				}
-			}
-		},
-		"SubnetRouteTableAssociation3": {
-			"Type": "AWS::EC2::SubnetRouteTableAssociation",
-			"Properties": {
-				"SubnetId": {
-					"Ref": "Subnet2"
-				},
-				"RouteTableId": {
-					"Ref": "RouteTable1"
-				}
-			}
-		},
 		"FortiGateSecGrp": {
 			"Type": "AWS::EC2::SecurityGroup",
 			"Properties": {
 				"VpcId": {
-					"Ref": "VPC"
+					"Ref": "VPCID"
 				},
 				"GroupDescription": "FortigateSecGrp",
 				"SecurityGroupIngress": [{
@@ -936,7 +683,7 @@
 				}],
 				"SourceDestCheck": "false",
 				"SubnetId": {
-					"Ref": "Subnet1"
+					"Ref": "PublicSubnet"
 				},
 				"Tags": [{
 					"Key": "Name",
@@ -985,7 +732,7 @@
 				}],
 				"SourceDestCheck": "false",
 				"SubnetId": {
-					"Ref": "Subnet1"
+					"Ref": "PublicSubnet"
 				},
 				"Tags": [{
 					"Key": "Name",
@@ -1060,7 +807,7 @@
 				}],
 				"SourceDestCheck": "false",
 				"SubnetId": {
-					"Ref": "Subnet2"
+					"Ref": "PrivateSubnet"
 				},
 				"Tags": [{
 					"Key": "Name",
@@ -1106,7 +853,7 @@
 				}],
 				"SourceDestCheck": "false",
 				"SubnetId": {
-					"Ref": "Subnet2"
+					"Ref": "PrivateSubnet"
 				},
 				"Tags": [{
 					"Key": "Name",
@@ -1138,7 +885,7 @@
 				}],
 				"SourceDestCheck": "false",
 				"SubnetId": {
-					"Ref": "Subnet3"
+					"Ref": "HAsyncSubnet"
 				},
 				"Tags": [{
 					"Key": "Name",
@@ -1170,7 +917,7 @@
 				}],
 				"SourceDestCheck": "false",
 				"SubnetId": {
-					"Ref": "Subnet4"
+					"Ref": "HAmgmtSubnet"
 				},
 				"Tags": [{
 					"Key": "Name",
@@ -1202,7 +949,7 @@
 				}],
 				"SourceDestCheck": "false",
 				"SubnetId": {
-					"Ref": "Subnet3"
+					"Ref": "HAsyncSubnet"
 				},
 				"Tags": [{
 					"Key": "Name",
@@ -1234,7 +981,7 @@
 				}],
 				"SourceDestCheck": "false",
 				"SubnetId": {
-					"Ref": "Subnet4"
+					"Ref": "HAmgmtSubnet"
 				},
 				"Tags": [{
 					"Key": "Name",
