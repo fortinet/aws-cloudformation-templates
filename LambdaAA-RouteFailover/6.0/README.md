@@ -18,7 +18,7 @@ The main benefits of this solution are:
 **Note:**  Other Fortinet solutions for AWS such as native FortiOS FGCP A-P clustering, AutoScaling, and Transit VPC are available.  Please visit [www.fortinet.com/aws](https://www.fortinet.com/aws) for further information.
 
 **Reference Diagram:**
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/net-diag1.png)
+![Example Diagram](./content/net-diag1.png)
 
 ## Solution Components
 The solution is comprised of multiple components to provide the overall failover solution:
@@ -105,7 +105,7 @@ END RequestId: 4e2cc405-cd7e-11e8-8c63-977ba303ae86
 ```
 
 **Reference Diagram:**
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/net-diag2.png)
+![Example Diagram](./content/net-diag2.png)
 
 ## CloudFormation Templates
 There are three CloudFormation templates that can be used for this solution set.
@@ -115,7 +115,7 @@ There are three CloudFormation templates that can be used for this solution set.
 
 The first template is optional and deploys a base VPC with a pair of public and private subnets in 2 separate availability zones.  This template can be used to create the expected base VPC architecture for the main two templates.  For example, the VPC will have DNS Resolution and DNS Hostnames options enabled, which is required for the VPC interface endpoint to use private DNS.  Below is an example of the parameters the template will request.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/params1.png)
+![Example Diagram](./content/params1.png)
 
 The last two templates will deploy the solution set into an existing VPC with all the required components.  The only difference between these templates is that either BYOL or PAYG FortiGate instances are used.  These templates not only deploy AWS infrastructure but also bootstrap the FortiGate instances with the relevant network and FortiOS stich configuration to support the VPC.  Most of this information is gathered as parameters in the templates when a stack is deployed.  These parameters are organized into these main groups:
   - VPC Configuration
@@ -126,22 +126,22 @@ The last two templates will deploy the solution set into an existing VPC with al
 ### VPC Configuration
 In this section the parameters will request general information for the existing VPC.  AWS resource IDs will need to be selected for the existing VPC and subnets.  Below is an example of the parameters that both templates will request.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/params2.png)
+![Example Diagram](./content/params2.png)
 
 ### FortiGate Instance Configuration
 For this section the parameters will request general instance information such as instance type, key pair, and availability zone to deploy the instances into.  Also FortiOS specific information will be requested such as BYOL license file content.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/params3.png)
+![Example Diagram](./content/params3.png)
 
 ### Lambda Configuration
 This section requests a TCP port to use for health checks performed by Lambda.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/params4.png)
+![Example Diagram](./content/params4.png)
 
 ### External ELBv2 Configuration
 The last section requests if an external NLB\ALB should be deployed or not.  The default selection is None, so no ELB will be deployed with this value.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/params5.png)
+![Example Diagram](./content/params5.png)
 
 
 ## Deployment
@@ -158,92 +158,92 @@ Once the prerequisites have been satisfied, download a local copy of the relevan
 ----
 1.  In the AWS services page under All Services > Management Tools, select CloudFormation.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy1.png)
+![Example Diagram](./content/deploy1.png)
 
 2.  Select Create New Stack.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy2.png)
+![Example Diagram](./content/deploy2.png)
 
 3.  On the Select Template page, under the Choose a Template section select Upload a template to Amazon S3 and browse to your local copy of the chosen deployment template.  In this example, we are using the ‘FGT_LambdaAA-RouteFailover_ExistingVPC_BYOL.template.json’ template.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy3.png)
+![Example Diagram](./content/deploy3.png)
 
 4.  On the Specify Details page, you will be prompted for a stack name and parameters for the deployment.  We are using a AWS resource IDs for a VPC created with the default values of the 'NewVPC_BaseSetup.template' template.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy4.png)
+![Example Diagram](./content/deploy4.png)
 
 5.  In the FortiGate Instance Configuration parameters section, we have selected an Availability Zone and Key Pair to use for the FortiGates as well as BYOL licensing.  Notice, since we are using a BYOL template we are prompted for the FortiGate1LicenseFile and FortiGate2LicenseFile parameters.  For the values we are literally copying & pasting the actual BYOL license file content into these fields.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy5.png)
+![Example Diagram](./content/deploy5.png)
 
 6.  In the Lambda Configuration parameters section, we are going with the defaults value.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy6.png)
+![Example Diagram](./content/deploy6.png)
 
 7.  In the External ELBv2 Configuration parameters section, we are also going with the defaults so no AWS NLB or ELB will be deployed.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy7.png)
+![Example Diagram](./content/deploy7.png)
 
 8.  On the Options page, you can scroll to the bottom and select Next.
 9.  On the Review page, confirm that the stack name and parameters are correct.  This is what the parameters look like in this example.  Notice the parameter values for the FortiGate License Files.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy8.png)
+![Example Diagram](./content/deploy8.png)
 
 10.  On the Review page, scroll down to the capabilities section.  As the template will create IAM resources, you need to acknowledge this by checking the box next to ‘I acknowledge that AWS CloudFormation might create IAM resources’ and then click Create.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy9.png)
+![Example Diagram](./content/deploy9.png)
 
 11.  On the main AWS CloudFormation console, you will now see your stack being created.  You can monitor the progress by selecting your stack and then select the Events tab.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy10.png)
+![Example Diagram](./content/deploy10.png)
 
 12.  Once the stack creation has completed successfully, select the Resources tab and search for 'HealthCheckAPIKey’, then click on the resource ID which will take you to the AWS API Gateway console.  Click on the 'show' button next to API Key so you can copy the secret API Key value to complete the FortiOS stich configuration.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy11.png)
+![Example Diagram](./content/deploy11.png)
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy12.png)
+![Example Diagram](./content/deploy12.png)
 
 13.  Navigate back to the AWS CloudFormation console and select the Outputs tab to get the login information for the FortiGate instances.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy13.png)
+![Example Diagram](./content/deploy13.png)
 
 14.  Log into both FortiGates and navigate to (Security Fabric > Automation > healthcheck-stitch), then update the API Key value with the secret key data and save your changes.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy14.png)
+![Example Diagram](./content/deploy14.png)
  
 15.  Navigate to the AWS EC2 console and reference the instance Description tab for FortiGate1.  Notice the public and private ENIs attached to the instance.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy15.png)
+![Example Diagram](./content/deploy15.png)
 
 16.  Now reference the instance Description tab for FortiGate2.  Notice the public and private ENIs attached to the instance.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy16.png)
+![Example Diagram](./content/deploy16.png)
 
 17.  Navigate to the AWS VPC console and look at the routes for the AZ1PrivateRouteTable and AZ2PrivateRouteTable which are associated to the corresponding private subnets for each AZ.  The default route target is pointing to ENI1\port2 of the FortiGate in the same AZ.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy17.png)
+![Example Diagram](./content/deploy17.png)
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy18.png)
+![Example Diagram](./content/deploy18.png)
 
 18.  Navigate back to the AWS EC2 console and shutdown FortiGate1 via the EC2 console.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy19.png)
+![Example Diagram](./content/deploy19.png)
 
 19.  Navigate back to the AWS VPC console and look at the routes for the AZ1PrivateRouteTable and AZ2PrivateRouteTable.  Notice that the routes for AZ1PrivateRouteTable and AZ2PrivateRouteTable are both pointing to ENI1\port2 of the FortiGate2.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy20.png)
+![Example Diagram](./content/deploy20.png)
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy21.png)
+![Example Diagram](./content/deploy21.png)
 
 20.  Now power on FortiGate1 and wait for the instance to fully boot. 
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy22.png)
+![Example Diagram](./content/deploy22.png)
  
 21.  Navigate back to the AWS VPC console and look at the routes for the AZ1PrivateRouteTable and AZ2PrivateRouteTable.  Notice that the routes for AZ1PrivateRouteTable have been updated to point to ENI1\port2 of the FortiGate1.
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy23.png)
+![Example Diagram](./content/deploy23.png)
 
-![Example Diagram](https://raw.githubusercontent.com/fortinetsolutions/AWS-CloudFormationTemplates/master/Templates/LambdaAA-RouteFailover/6.0/content/deploy24.png)
+![Example Diagram](./content/deploy24.png)
  
 22.  This concludes the template deployment example.
 ----
