@@ -68,6 +68,14 @@ A VPC interface endpoint for EC2 is created so that the Lambda function can acce
 **Note:** The VPC interface endpoint is using private DNS so this requires that your VPC has both DNS Resolution and DNS Hostnames enabled in your VPC settings.  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/vpce-interface.html#vpce-private-dns) for further information.
 
 
+### CloudWatch Alarms
+There are a total of three CloudWatch Alarms created by the CloudFormation template.  The first two alarms are to implement AWS EC2 AutoRecovery when the instance status checks fail for 15 consecutive minutes.  Reference [AWS Documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-recover.html) for further information.
+
+The final alarm is used to send a notification to administrators when an AWS SDN failover is performed from the active instance to the passive instance.  The CloudFormation template creates an SNS Topic called 'yourstackname-FailoverTopic' and associates the Topic to this alarm.  Additionally a subscription request is sent to the email address provided in the 'Email Notification' parameter of the CloudFormation template.
+
+**Note** an alert is sent when the alarm transitions from 'OK' to 'ALARM' status.  The alarm will stay in 'ALARM' status for at least 15 minutes before returning to an 'OK' status.  Reference [AWS Documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html) for further information.
+
+
 ## Failover Process
 The following network diagram will be used to illustrate a failover event from AZ1's instance (FortiGate1), to AZ2's instance (FortiGate2).  Reference the relevant CloudWatch logs showing actions taken for each step in the failover process.
 
@@ -129,7 +137,7 @@ In this section the parameters will request general information for the existing
 ![Example Diagram](./content/params2.png)
 
 ### FortiGate Instance Configuration
-For this section the parameters will request general instance information such as instance type, key pair, and availability zone to deploy the instances into.  Also FortiOS specific information will be requested such as BYOL license file content.
+For this section the parameters will request general instance information such as instance type, key pair, and availability zone to deploy the instances into.  Also FortiOS specific information will be requested such as the init S3 bucket, bucket region, and FortiGate License filenames if you are using the BYOL template.
 
 ![Example Diagram](./content/params3.png)
 
@@ -151,7 +159,8 @@ Before attempting to create a stack with the templates, a few prerequisites shou
   * [PAYG Marketplace Listing](https://aws.amazon.com/marketplace/pp/B00PCZSWDA)
 2.	The solution requires 2 EIPs to be created so ensure the AWS region being used has available capacity.  Reference [AWS Documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-resource-limits.html) for more information on EC2 resource limits and how to request increases.
 3.	If BYOL licensing is to be used, ensure these licenses have been registered on the support site.  Reference the VM license registration process PDF in this [KB Article](http://kb.fortinet.com/kb/microsites/search.do?cmd=displayKC&docType=kc&externalId=FD32312).
-4.  If deploying into an existing VPC that was not created with the 'NewVPC_BaseSetup.template', ensure that DNS resolution and DNS hostname support is enabled for the VPC.  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/vpce-interface.html#vpce-private-dns) for further information.
+4.  If BYOL licensing is to be used, **create a new S3 bucket in the same region where the template will be deployed** and upload these licenses to the root directory.
+5.  If deploying into an existing VPC that was not created with the 'NewVPC_BaseSetup.template', ensure that DNS resolution and DNS hostname support is enabled for the VPC.  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/vpce-interface.html#vpce-private-dns) for further information.
 
 Once the prerequisites have been satisfied, download a local copy of the relevant template for your deployment and login to your account in the AWS console.
 
@@ -172,7 +181,7 @@ Once the prerequisites have been satisfied, download a local copy of the relevan
 
 ![Example Diagram](./content/deploy4.png)
 
-5.  In the FortiGate Instance Configuration parameters section, we have selected an Availability Zone and Key Pair to use for the FortiGates as well as BYOL licensing.  Notice, since we are using a BYOL template we are prompted for the FortiGate1LicenseFile and FortiGate2LicenseFile parameters.  For the values we are literally copying & pasting the actual BYOL license file content into these fields.
+5.  In the FortiGate Instance Configuration parameters section, we have selected an Availability Zone and Key Pair to use for the FortiGates as well as BYOL licensing.  Notice, since we are using a BYOL template we are prompted for the InitS3Bucket, InitS3BucketRegion, FortiGate1LicenseFile, and FortiGate2LicenseFile parameters.  For the values we are going to reference the S3 bucket and relevant information from the deployment prerequisite step 4.
 
 ![Example Diagram](./content/deploy5.png)
 
@@ -185,7 +194,7 @@ Once the prerequisites have been satisfied, download a local copy of the relevan
 ![Example Diagram](./content/deploy7.png)
 
 8.  On the Options page, you can scroll to the bottom and select Next.
-9.  On the Review page, confirm that the stack name and parameters are correct.  This is what the parameters look like in this example.  Notice the parameter values for the FortiGate License Files.
+9.  On the Review page, confirm that the stack name and parameters are correct.  This is what the parameters look like in this example.  Notice the parameter values for the init S3 bucket, bucket region, and FortiGate License filenames.
 
 ![Example Diagram](./content/deploy8.png)
 

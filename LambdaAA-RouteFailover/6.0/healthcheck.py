@@ -5,7 +5,7 @@ import boto3
 import logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-ec2client = boto3.client('ec2')
+ec2client = boto3.client('ec2', endpoint_url=os.environ['VPCEndpointURL'])
 
 try:
     az1ip, az2ip = os.environ['InstanceIPs'].split(',')
@@ -106,6 +106,12 @@ def replace_routes(routemap, az, eni):
 
 def lambda_handler(event, context):
     logger.info('-=-' * 20)
+    if 'source' in event:
+        if 'aws.events' in event['source']:
+            logger.info('>> Triggered by CloudWatch Scheduled Event <<')
+    if 'data' in event:
+        if 'stitch' in event['data']:
+            logger.info('>> Triggered by FortiOS Stitch Action <<')
     logger.debug('>> az1ip: {}'.format(az1ip))
     logger.debug('>> az2ip: {}'.format(az2ip))
     logger.debug('>> az1eni: {}'.format(az1eni))
@@ -118,23 +124,28 @@ def lambda_handler(event, context):
     az2hc = GetHealthCheckStatus(az2ip, hcport)
     az2routes = GetRoutes(az2rts, az1eni, az2eni)
     if az1hc.status and az2hc.status is True:
+        logger.info('-->> AZ1-FGT is up, AZ2-FGT is up: Checking routes point to correct AZ-FGT')
         if az1routes.hit is True and check_routes(az1routes.routemap, '1', az1eni) is False:
             replace_routes(az1routes.routemap, '1', az1eni)
         if az2routes.hit is True and check_routes(az2routes.routemap, '2', az2eni) is False:
             replace_routes(az2routes.routemap, '2', az2eni)
     elif az1hc.status is True and az2hc.status is False:
+        logger.error('-->> AZ1-FGT is up, AZ2-FGT is down: Moving routes to AZ1-FGT')
+        logger.error('-->> Triggering_CloudWatch_Failover_Alarm')
         if az1routes.hit is True and check_routes(az1routes.routemap, '1', az1eni) is False:
             replace_routes(az1routes.routemap, '1', az1eni)
         if az2routes.hit is True and check_routes(az2routes.routemap, '2', az1eni) is False:
             replace_routes(az2routes.routemap, '2', az1eni)
     elif az1hc.status is False and az2hc.status is True:
+        logger.error('-->> AZ1-FGT is down, AZ2-FGT is up: Moving routes to AZ2-FGT')
+        logger.error('-->> Triggering_CloudWatch_Failover_Alarm')
         if az1routes.hit is True and check_routes(az1routes.routemap, '1', az2eni) is False:
             replace_routes(az1routes.routemap, '1', az2eni)
         if az2routes.hit is True and check_routes(az2routes.routemap, '2', az2eni) is False:
             replace_routes(az2routes.routemap, '2', az2eni)
+    elif az1hc.status and az2hc.status is False:
+        logger.error('!!-->> Both units are down: Bypassing route checks')
     logger.info('-=-' * 20)
-
-
 #
 # end of script
 #

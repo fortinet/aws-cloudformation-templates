@@ -6,7 +6,7 @@ import logging
 import boto3
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-ec2client = boto3.client('ec2')
+ec2client = boto3.client('ec2', endpoint_url=os.environ['VPCEndpointURL'])
 
 class get_instanceinfo(object):
     def __init__(self, vpcid, hapairvalue):

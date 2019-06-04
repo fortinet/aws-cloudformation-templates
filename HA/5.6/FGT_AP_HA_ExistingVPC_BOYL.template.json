@@ -3,35 +3,66 @@
     "Description": "AWS CloudFormation Template to launch VPC with two FortiGates HA as Active-Passive protecting the resources in the private subnet",
     "Metadata": {
         "AWS::CloudFormation::Interface": {
-            "ParameterGroups": [{
+            "ParameterGroups": [
+                {
                     "Label": {
                         "default": "VPC and Subnets Information"
                     },
-                    "Parameters": ["VPCID", "VPCCIDR", "PublicSubnet1", "PrivateSubnet1", "HAsyncSubnet", "HAmgmtSubnet"]
+                    "Parameters": [
+                        "VPCID",
+                        "VPCCIDR",
+                        "PublicSubnet1",
+                        "PrivateSubnet1",
+                        "HAsyncSubnet",
+                        "HAmgmtSubnet"
+                    ]
                 },
                 {
                     "Label": {
                         "default": "FortiGate Instance Configuration"
                     },
-                    "Parameters": ["FortiGateInstanceType", "CIDRForFortiGateAccess", "AZForFirewall", "KeyPair", "SourceS3Bucket", "SourceS3BucketRegion", "FgtALicenseFile", "FgtAConfigFile", "FgtBLicenseFile", "FgtBConfigFile"]
+                    "Parameters": [
+                        "FortiGateInstanceType",
+                        "CIDRForFortiGateAccess",
+                        "KeyPair",
+                        "SourceS3Bucket",
+                        "SourceS3BucketRegion",
+                        "FgtALicenseFile",
+                        "FgtAConfigFile",
+                        "FgtBLicenseFile",
+                        "FgtBConfigFile"
+                    ]
                 },
                 {
                     "Label": {
                         "default": "IP Configuration for the FortiGate A Interfaces"
                     },
-                    "Parameters": ["FortiGateAPublicIP", "FortiGateAInternalIP", "FortiGateASyncIP", "FortiGateAMgmtIP"]
+                    "Parameters": [
+                        "FortiGateAPublicIP",
+                        "FortiGateAInternalIP",
+                        "FortiGateASyncIP",
+                        "FortiGateAMgmtIP"
+                    ]
                 },
                 {
                     "Label": {
                         "default": "IP Configuration for the FortiGate B Interfaces"
                     },
-                    "Parameters": ["FortiGateBPublicIP", "FortiGateBInternalIP", "FortiGateBSyncIP", "FortiGateBMgmtIP"]
+                    "Parameters": [
+                        "FortiGateBPublicIP",
+                        "FortiGateBInternalIP",
+                        "FortiGateBSyncIP",
+                        "FortiGateBMgmtIP"
+                    ]
                 },
                 {
                     "Label": {
                         "default": "IP Configuration for the Cluster"
                     },
-                    "Parameters": ["ClusterPublicIP", "ClusterInternalIP"]
+                    "Parameters": [
+                        "ClusterPublicIP",
+                        "ClusterInternalIP"
+                    ]
                 }
             ]
         }
@@ -164,49 +195,49 @@
     "Mappings": {
         "RegionMap": {
             "ap-northeast-1": {
-                "fgtami": "ami-b19870ce"
+                "fgtami": "ami-00cc02c5023ff4639"
             },
             "ap-northeast-2": {
-                "fgtami": "ami-090aa367"
+                "fgtami": "ami-0c8845d1c01e3659a"
             },
             "ap-south-1": {
-                "fgtami": "ami-dccae9b3"
+                "fgtami": "ami-00b6a7b0048857764"
             },
             "ap-southeast-1": {
-                "fgtami": "ami-ecbe8b90"
+                "fgtami": "ami-0fb590bcb4f1cc019"
             },
             "ap-southeast-2": {
-                "fgtami": "ami-3508df57"
+                "fgtami": "ami-0af5349c1f602a235"
             },
             "ca-central-1": {
-                "fgtami": "ami-168a0a72"
+                "fgtami": "ami-014aeec09890481f4"
             },
             "eu-central-1": {
-                "fgtami": "ami-9e81a375"
+                "fgtami": "ami-0e325322df4b19db1"
             },
             "eu-west-1": {
-                "fgtami": "ami-931622ea"
+                "fgtami": "ami-0ff9261330e4367be"
             },
             "eu-west-2": {
-                "fgtami": "ami-5c698b3b"
+                "fgtami": "ami-0ae6bc9517acb5dd9"
             },
             "eu-west-3": {
-                "fgtami": "ami-b39f2ece"
+                "fgtami": "ami-097365ecf21cd0940"
             },
             "sa-east-1": {
-                "fgtami": "ami-098cd165"
+                "fgtami": "ami-0e1c89951a2f81c43"
             },
             "us-east-1": {
-                "fgtami": "ami-15189a6a"
+                "fgtami": "ami-0acbbe4a29f077dc3"
             },
             "us-east-2": {
-                "fgtami": "ami-0f2e136a"
+                "fgtami": "ami-0dbb5de7e55b8498a"
             },
             "us-west-1": {
-                "fgtami": "ami-c3120ca3"
+                "fgtami": "ami-0862c5e9d55d5398e"
             },
             "us-west-2": {
-                "fgtami": "ami-bb7f0ec3"
+                "fgtami": "ami-0ef01023e7605bd9a"
             }
         }
     },
@@ -216,42 +247,54 @@
             "Properties": {
                 "AssumeRolePolicyDocument": {
                     "Version": "2012-10-17",
-                    "Statement": [{
-                        "Effect": "Allow",
-                        "Principal": {
-                            "Service": ["ec2.amazonaws.com"]
-                        },
-                        "Action": ["sts:AssumeRole"]
-                    }]
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
                 },
                 "Path": "/",
-                "Policies": [{
-                    "PolicyName": "ApplicationPolicy",
-                    "PolicyDocument": {
-                        "Version": "2012-10-17",
-                        "Statement": [{
-                            "Effect": "Allow",
-                            "Action": [
-                                "ec2:Describe*",
-                                "ec2:AssociateAddress",
-                                "ec2:AssignPrivateIpAddresses",
-                                "ec2:UnassignPrivateIpAddresses",
-                                "ec2:ReplaceRoute",
-                                "s3:GetObject"
-                            ],
-                            "Resource": "*"
-                        }]
+                "Policies": [
+                    {
+                        "PolicyName": "ApplicationPolicy",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "ec2:Describe*",
+                                        "ec2:AssociateAddress",
+                                        "ec2:AssignPrivateIpAddresses",
+                                        "ec2:UnassignPrivateIpAddresses",
+                                        "ec2:ReplaceRoute",
+                                        "s3:GetObject"
+                                    ],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
                     }
-                }]
+                ]
             }
         },
         "InstanceProfile": {
             "Type": "AWS::IAM::InstanceProfile",
             "Properties": {
                 "Path": "/",
-                "Roles": [{
-                    "Ref": "InstanceRole"
-                }]
+                "Roles": [
+                    {
+                        "Ref": "InstanceRole"
+                    }
+                ]
             }
         },
         "FortiGateSecGrpBase": {
@@ -261,7 +304,8 @@
                     "Ref": "VPCID"
                 },
                 "GroupDescription": "FortigateSecGrp",
-                "SecurityGroupIngress": [{
+                "SecurityGroupIngress": [
+                    {
                         "IpProtocol": "-1",
                         "FromPort": "0",
                         "ToPort": "65535",
@@ -299,9 +343,13 @@
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "ImageId": {
-                    "Fn::FindInMap": ["RegionMap", {
-                        "Ref": "AWS::Region"
-                    }, "fgtami"]
+                    "Fn::FindInMap": [
+                        "RegionMap",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "fgtami"
+                    ]
                 },
                 "InstanceType": {
                     "Ref": "FortiGateInstanceType"
@@ -312,7 +360,8 @@
                 "KeyName": {
                     "Ref": "KeyPair"
                 },
-                "NetworkInterfaces": [{
+                "NetworkInterfaces": [
+                    {
                         "NetworkInterfaceId": {
                             "Ref": "fgtAeni0PublicSubnet1"
                         },
@@ -337,36 +386,65 @@
                         "DeviceIndex": "3"
                     }
                 ],
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": {
-                        "Fn::Join": [
-                            "", [{
-                                    "Ref": "AWS::StackName"
-                                },
-                                "-FortiGateA"
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "-FortiGateA"
+                                ]
                             ]
-                        ]
+                        }
                     }
-                }],
+                ],
                 "UserData": {
                     "Fn::Base64": {
-                        "Fn::Join": ["", [
-                            "{\n",
-                            "\"bucket\"", " : ", "\"", {
-                                "Ref": "SourceS3Bucket"
-                            }, "\"", ",\n",
-                            "\"region\"", " : ", "\"", {
-                                "Ref": "SourceS3BucketRegion"
-                            }, "\"", ",\n",
-                            "\"license\"", " : ", "\"", "/", {
-                                "Ref": "FgtALicenseFile"
-                            }, "\"", ",\n",
-                            "\"config\"", " : ", "\"", "/", {
-                                "Ref": "FgtAConfigFile"
-                            }, "\"", ",\n",
-                            "}"
-                        ]]
+                        "Fn::Join": [
+                            "",
+                            [
+                                "{\n",
+                                "\"bucket\"",
+                                " : ",
+                                "\"",
+                                {
+                                    "Ref": "SourceS3Bucket"
+                                },
+                                "\"",
+                                ",\n",
+                                "\"region\"",
+                                " : ",
+                                "\"",
+                                {
+                                    "Ref": "SourceS3BucketRegion"
+                                },
+                                "\"",
+                                ",\n",
+                                "\"license\"",
+                                " : ",
+                                "\"",
+                                "/",
+                                {
+                                    "Ref": "FgtALicenseFile"
+                                },
+                                "\"",
+                                ",\n",
+                                "\"config\"",
+                                " : ",
+                                "\"",
+                                "/",
+                                {
+                                    "Ref": "FgtAConfigFile"
+                                },
+                                "\"",
+                                ",\n",
+                                "}"
+                            ]
+                        ]
                     }
                 }
             }
@@ -375,9 +453,13 @@
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "ImageId": {
-                    "Fn::FindInMap": ["RegionMap", {
-                        "Ref": "AWS::Region"
-                    }, "fgtami"]
+                    "Fn::FindInMap": [
+                        "RegionMap",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "fgtami"
+                    ]
                 },
                 "InstanceType": {
                     "Ref": "FortiGateInstanceType"
@@ -388,7 +470,8 @@
                 "KeyName": {
                     "Ref": "KeyPair"
                 },
-                "NetworkInterfaces": [{
+                "NetworkInterfaces": [
+                    {
                         "NetworkInterfaceId": {
                             "Ref": "fgtBeni0PublicSubnet1"
                         },
@@ -413,36 +496,65 @@
                         "DeviceIndex": "3"
                     }
                 ],
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": {
-                        "Fn::Join": [
-                            "", [{
-                                    "Ref": "AWS::StackName"
-                                },
-                                "-FortiGateB"
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "-FortiGateB"
+                                ]
                             ]
-                        ]
+                        }
                     }
-                }],
+                ],
                 "UserData": {
                     "Fn::Base64": {
-                        "Fn::Join": ["", [
-                            "{\n",
-                            "\"bucket\"", " : ", "\"", {
-                                "Ref": "SourceS3Bucket"
-                            }, "\"", ",\n",
-                            "\"region\"", " : ", "\"", {
-                                "Ref": "SourceS3BucketRegion"
-                            }, "\"", ",\n",
-                            "\"license\"", " : ", "\"", "/", {
-                                "Ref": "FgtBLicenseFile"
-                            }, "\"", ",\n",
-                            "\"config\"", " : ", "\"", "/", {
-                                "Ref": "FgtBConfigFile"
-                            }, "\"", ",\n",
-                            "}"
-                        ]]
+                        "Fn::Join": [
+                            "",
+                            [
+                                "{\n",
+                                "\"bucket\"",
+                                " : ",
+                                "\"",
+                                {
+                                    "Ref": "SourceS3Bucket"
+                                },
+                                "\"",
+                                ",\n",
+                                "\"region\"",
+                                " : ",
+                                "\"",
+                                {
+                                    "Ref": "SourceS3BucketRegion"
+                                },
+                                "\"",
+                                ",\n",
+                                "\"license\"",
+                                " : ",
+                                "\"",
+                                "/",
+                                {
+                                    "Ref": "FgtBLicenseFile"
+                                },
+                                "\"",
+                                ",\n",
+                                "\"config\"",
+                                " : ",
+                                "\"",
+                                "/",
+                                {
+                                    "Ref": "FgtBConfigFile"
+                                },
+                                "\"",
+                                ",\n",
+                                "}"
+                            ]
+                        ]
                     }
                 }
             }
@@ -451,29 +563,37 @@
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "Description": "port1",
-                "GroupSet": [{
-                    "Ref": "FortiGateSecGrpBase"
-                }],
+                "GroupSet": [
+                    {
+                        "Ref": "FortiGateSecGrpBase"
+                    }
+                ],
                 "SourceDestCheck": "false",
                 "SubnetId": {
                     "Ref": "PublicSubnet1"
                 },
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": {
-                        "Fn::Join": [
-                            "", [{
-                                    "Ref": "AWS::StackName"
-                                },
-                                "fgtAeni0PublicSubnet1"
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "fgtAeni0PublicSubnet1"
+                                ]
                             ]
-                        ]
+                        }
+                    },
+                    {
+                        "Key": "Interface",
+                        "Value": "eth0"
                     }
-                }, {
-                    "Key": "Interface",
-                    "Value": "eth0"
-                }],
-                "PrivateIpAddresses": [{
+                ],
+                "PrivateIpAddresses": [
+                    {
                         "PrivateIpAddress": {
                             "Ref": "FortiGateAPublicIP"
                         },
@@ -492,34 +612,43 @@
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "Description": "port1",
-                "GroupSet": [{
-                    "Ref": "FortiGateSecGrpBase"
-                }],
+                "GroupSet": [
+                    {
+                        "Ref": "FortiGateSecGrpBase"
+                    }
+                ],
                 "SourceDestCheck": "false",
                 "SubnetId": {
                     "Ref": "PublicSubnet1"
                 },
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": {
-                        "Fn::Join": [
-                            "", [{
-                                    "Ref": "AWS::StackName"
-                                },
-                                "fgtBeni0PublicSubnet1"
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "fgtBeni0PublicSubnet1"
+                                ]
                             ]
-                        ]
-                    }
-                }, {
-                    "Key": "Interface",
-                    "Value": "eth0"
-                }],
-                "PrivateIpAddresses": [{
-                    "PrivateIpAddress": {
-                        "Ref": "FortiGateBPublicIP"
+                        }
                     },
-                    "Primary": "true"
-                }]
+                    {
+                        "Key": "Interface",
+                        "Value": "eth0"
+                    }
+                ],
+                "PrivateIpAddresses": [
+                    {
+                        "PrivateIpAddress": {
+                            "Ref": "FortiGateBPublicIP"
+                        },
+                        "Primary": "true"
+                    }
+                ]
             }
         },
         "ClusterEIP": {
@@ -561,7 +690,10 @@
             "Type": "AWS::EC2::EIPAssociation",
             "Properties": {
                 "AllocationId": {
-                    "Fn::GetAtt": ["ClusterEIP", "AllocationId"]
+                    "Fn::GetAtt": [
+                        "ClusterEIP",
+                        "AllocationId"
+                    ]
                 },
                 "NetworkInterfaceId": {
                     "Ref": "fgtAeni0PublicSubnet1"
@@ -576,26 +708,33 @@
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "Description": "port2",
-                "GroupSet": [{
-                    "Ref": "FortiGateSecGrpBase"
-                }],
+                "GroupSet": [
+                    {
+                        "Ref": "FortiGateSecGrpBase"
+                    }
+                ],
                 "SourceDestCheck": "false",
                 "SubnetId": {
                     "Ref": "PrivateSubnet1"
                 },
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": {
-                        "Fn::Join": [
-                            "", [{
-                                    "Ref": "AWS::StackName"
-                                },
-                                "fgtAeni1PrivateSubnet1"
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "fgtAeni1PrivateSubnet1"
+                                ]
                             ]
-                        ]
+                        }
                     }
-                }],
-                "PrivateIpAddresses": [{
+                ],
+                "PrivateIpAddresses": [
+                    {
                         "PrivateIpAddress": {
                             "Ref": "FortiGateAInternalIP"
                         },
@@ -614,25 +753,31 @@
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "Description": "port2",
-                "GroupSet": [{
-                    "Ref": "FortiGateSecGrpBase"
-                }],
+                "GroupSet": [
+                    {
+                        "Ref": "FortiGateSecGrpBase"
+                    }
+                ],
                 "SourceDestCheck": "false",
                 "SubnetId": {
                     "Ref": "PrivateSubnet1"
                 },
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": {
-                        "Fn::Join": [
-                            "", [{
-                                    "Ref": "AWS::StackName"
-                                },
-                                "fgtBeni1PrivateSubnet1"
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "fgtBeni1PrivateSubnet1"
+                                ]
                             ]
-                        ]
+                        }
                     }
-                }],
+                ],
                 "PrivateIpAddress": {
                     "Ref": "FortiGateBInternalIP"
                 }
@@ -642,25 +787,31 @@
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "Description": "port3",
-                "GroupSet": [{
-                    "Ref": "FortiGateSecGrpBase"
-                }],
+                "GroupSet": [
+                    {
+                        "Ref": "FortiGateSecGrpBase"
+                    }
+                ],
                 "SourceDestCheck": "false",
                 "SubnetId": {
                     "Ref": "HAsyncSubnet"
                 },
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": {
-                        "Fn::Join": [
-                            "", [{
-                                    "Ref": "AWS::StackName"
-                                },
-                                "fgtAeni2HAsyncSubnet"
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "fgtAeni2HAsyncSubnet"
+                                ]
                             ]
-                        ]
+                        }
                     }
-                }],
+                ],
                 "PrivateIpAddress": {
                     "Ref": "FortiGateASyncIP"
                 }
@@ -670,25 +821,31 @@
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "Description": "port4",
-                "GroupSet": [{
-                    "Ref": "FortiGateSecGrpBase"
-                }],
+                "GroupSet": [
+                    {
+                        "Ref": "FortiGateSecGrpBase"
+                    }
+                ],
                 "SourceDestCheck": "false",
                 "SubnetId": {
                     "Ref": "HAmgmtSubnet"
                 },
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": {
-                        "Fn::Join": [
-                            "", [{
-                                    "Ref": "AWS::StackName"
-                                },
-                                "fgtAeni3HAmgmtSubnet"
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "fgtAeni3HAmgmtSubnet"
+                                ]
                             ]
-                        ]
+                        }
                     }
-                }],
+                ],
                 "PrivateIpAddress": {
                     "Ref": "FortiGateAMgmtIP"
                 }
@@ -698,25 +855,31 @@
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "Description": "port3",
-                "GroupSet": [{
-                    "Ref": "FortiGateSecGrpBase"
-                }],
+                "GroupSet": [
+                    {
+                        "Ref": "FortiGateSecGrpBase"
+                    }
+                ],
                 "SourceDestCheck": "false",
                 "SubnetId": {
                     "Ref": "HAsyncSubnet"
                 },
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": {
-                        "Fn::Join": [
-                            "", [{
-                                    "Ref": "AWS::StackName"
-                                },
-                                "fgtBeni2HAsyncSubnet"
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "fgtBeni2HAsyncSubnet"
+                                ]
                             ]
-                        ]
+                        }
                     }
-                }],
+                ],
                 "PrivateIpAddress": {
                     "Ref": "FortiGateBSyncIP"
                 }
@@ -726,25 +889,31 @@
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "Description": "port4",
-                "GroupSet": [{
-                    "Ref": "FortiGateSecGrpBase"
-                }],
+                "GroupSet": [
+                    {
+                        "Ref": "FortiGateSecGrpBase"
+                    }
+                ],
                 "SourceDestCheck": "false",
                 "SubnetId": {
                     "Ref": "HAmgmtSubnet"
                 },
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": {
-                        "Fn::Join": [
-                            "", [{
-                                    "Ref": "AWS::StackName"
-                                },
-                                "fgtBeni3HAmgmtSubnet"
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "fgtBeni3HAmgmtSubnet"
+                                ]
                             ]
-                        ]
+                        }
                     }
-                }],
+                ],
                 "PrivateIpAddress": {
                     "Ref": "FortiGateBMgmtIP"
                 }
@@ -754,7 +923,10 @@
             "Type": "AWS::EC2::EIPAssociation",
             "Properties": {
                 "AllocationId": {
-                    "Fn::GetAtt": ["FgtAEIP", "AllocationId"]
+                    "Fn::GetAtt": [
+                        "FgtAEIP",
+                        "AllocationId"
+                    ]
                 },
                 "NetworkInterfaceId": {
                     "Ref": "fgtAeni3HAmgmtSubnet"
@@ -769,7 +941,10 @@
             "Type": "AWS::EC2::EIPAssociation",
             "Properties": {
                 "AllocationId": {
-                    "Fn::GetAtt": ["FgtAEIPBegin", "AllocationId"]
+                    "Fn::GetAtt": [
+                        "FgtAEIPBegin",
+                        "AllocationId"
+                    ]
                 },
                 "NetworkInterfaceId": {
                     "Ref": "fgtAeni0PublicSubnet1"
@@ -784,7 +959,10 @@
             "Type": "AWS::EC2::EIPAssociation",
             "Properties": {
                 "AllocationId": {
-                    "Fn::GetAtt": ["FgtBEIP", "AllocationId"]
+                    "Fn::GetAtt": [
+                        "FgtBEIP",
+                        "AllocationId"
+                    ]
                 },
                 "NetworkInterfaceId": {
                     "Ref": "fgtBeni3HAmgmtSubnet"
@@ -799,7 +977,10 @@
             "Type": "AWS::EC2::EIPAssociation",
             "Properties": {
                 "AllocationId": {
-                    "Fn::GetAtt": ["FgtBEIPBegin", "AllocationId"]
+                    "Fn::GetAtt": [
+                        "FgtBEIPBegin",
+                        "AllocationId"
+                    ]
                 },
                 "NetworkInterfaceId": {
                     "Ref": "fgtBeni0PublicSubnet1"
@@ -816,18 +997,22 @@
                 "VpcId": {
                     "Ref": "VPCID"
                 },
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": {
-                        "Fn::Join": [
-                            "", [{
-                                    "Ref": "AWS::StackName"
-                                },
-                                "-PrivateRouteTable"
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "-PrivateRouteTable"
+                                ]
                             ]
-                        ]
+                        }
                     }
-                }]
+                ]
             }
         },
         "Route": {
@@ -865,8 +1050,10 @@
         "MemberAURL": {
             "Value": {
                 "Fn::Join": [
-                    "", [
-                        "https://", {
+                    "",
+                    [
+                        "https://",
+                        {
                             "Ref": "FgtAEIP"
                         }
                     ]
@@ -887,8 +1074,10 @@
         "MemberBURL": {
             "Value": {
                 "Fn::Join": [
-                    "", [
-                        "https://", {
+                    "",
+                    [
+                        "https://",
+                        {
                             "Ref": "FgtBEIP"
                         }
                     ]
