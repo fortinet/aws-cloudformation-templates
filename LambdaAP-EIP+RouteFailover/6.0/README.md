@@ -135,7 +135,7 @@ In this section the parameters will request general information for the existing
 ![Example Diagram](./content/params2.png)
 
 ### FortiGate Instance Configuration
-For this section the parameters will request general instance information such as instance type, key pair, and availability zone to deploy the instances into.  Also FortiOS specific information will be requested such as BYOL license file content and IP addresses for AWS resources within the VPC such as the IP of the AWS intrinsic router and DNS server for the public and private subnets.  The AWS intrinsic router is always the first host IP for each subnet.  The AWS intrinsic DNS server is always the second host IP for each subnet.  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Subnets.html#VPC_Sizing) for further information on host IPs used by AWS services within a subnet.
+For this section the parameters will request general instance information such as instance type, key pair, and availability zone to deploy the instances into.  Also FortiOS specific information will be requested such as the init S3 bucket, bucket region, and FortiGate License filenames if you are using the BYOL template. Additional items such as the IP addresses for AWS resources within the VPC such as the IP of the AWS intrinsic router for the public and private subnets.  The AWS intrinsic router is always the first host IP for each subnet.  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Subnets.html#VPC_Sizing) for further information on host IPs used by AWS services within a subnet.
 
 ![Example Diagram](./content/params3.png)
 
@@ -157,7 +157,8 @@ Before attempting to create a stack with the templates, a few prerequisites shou
   * [PAYG Marketplace Listing](https://aws.amazon.com/marketplace/pp/B00PCZSWDA)
 2.	The solution requires 3 EIPs to be created so ensure the AWS region being used has available capacity.  Reference [AWS Documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-resource-limits.html) for more information on EC2 resource limits and how to request increases.
 3.	If BYOL licensing is to be used, ensure these licenses have been registered on the support site.  Reference the VM license registration process PDF in this [KB Article](http://kb.fortinet.com/kb/microsites/search.do?cmd=displayKC&docType=kc&externalId=FD32312).
-4.  If deploying into an existing VPC that was not created with the 'NewVPC_BaseSetup.template', ensure that DNS resolution and DNS hostname support is enabled for the VPC.  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/vpce-interface.html#vpce-private-dns) for further information.
+4.  If BYOL licensing is to be used, **create a new S3 bucket in the same region where the template will be deployed** and upload these licenses to the root directory.
+5.  If deploying into an existing VPC that was not created with the 'NewVPC_BaseSetup.template', ensure that DNS resolution and DNS hostname support is enabled for the VPC.  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/vpce-interface.html#vpce-private-dns) for further information.
 
 Once the prerequisites have been satisfied, download a local copy of the relevant template for your deployment and login to your account in the AWS console.
 
@@ -178,7 +179,7 @@ Once the prerequisites have been satisfied, download a local copy of the relevan
 
 ![Example Diagram](./content/deploy4.png)
 
-5.  In the FortiGate Instance Configuration parameters section, we have selected an Availability Zone and Key Pair to use for the FortiGates as well as BYOL licensing.  Notice, since we are using a BYOL template we are prompted for the FortiGate1LicenseFile and FortiGate2LicenseFile parameters.  For the values we are literally copying & pasting the actual BYOL license file content into these fields.
+5.  In the FortiGate Instance Configuration parameters section, we have selected an Availability Zone and Key Pair to use for the FortiGates as well as BYOL licensing.  Notice, since we are using a BYOL template we are prompted for the InitS3Bucket, InitS3BucketRegion, FortiGate1LicenseFile, and FortiGate2LicenseFile parameters.  For the values we are going to reference the S3 bucket and relevant information from the deployment prerequisite step 4.
 
 ![Example Diagram](./content/deploy5.png)
 
@@ -191,7 +192,7 @@ Once the prerequisites have been satisfied, download a local copy of the relevan
 ![Example Diagram](./content/deploy7.png)
 
 8.  On the Options page, you can scroll to the bottom and select Next.
-9.  On the Review page, confirm that the stack name and parameters are correct.  This is what the parameters look like in this example.  Notice the parameter values for the FortiGate License Files.
+9.  On the Review page, confirm that the stack name and parameters are correct.  This is what the parameters look like in this example.  Notice the parameter values for the init S3 bucket, bucket region, and FortiGate License filenames.
 
 ![Example Diagram](./content/deploy8.png)
 
@@ -252,16 +253,29 @@ Once the prerequisites have been satisfied, download a local copy of the relevan
 23.  This concludes the template deployment example.
 ----
 
-## FAQ \ Tshoot	
+## FAQ \ Tshoot
+ - **How do I share firewall policy and objects between the FortiGates?**
+
+The FortiGate instances are deployed as standalone instances, however centralized configuration management can be fully provided with the use of a FortiManager and policy packages.  This would allow a single firewall policy package and objects to be deployed to both of the FortiGate instances.
+
+The FortiManager can be an existing physical\virtual appliance or you can deploy a new FortiManager instance.
+
+For further information on FortiManager, such as the Administration Guide or FortiManager to FortiGate compatibility matrix, please visit [docs.fortinet.com](https://docs.fortinet.com/fortimanager/admin-guides) for further information. 
+
+Alternatively, the FortiGates can be fully configured via the GUI, CLI, or API by applying changes to each FGT manually.
+
   - **Are multiple Failover EIPs supported?**
+
 Yes.  The Lambda function will move over any EIPs associated to the secondary IPs of the active instance's public interface.  In order to configure additional secondary IPs on the public ENI and in FortiOS for port1, reference this [use-case guide](https://www.fortinet.com/content/dam/fortinet/assets/solutions/aws/Fortinet_Multiple_Public_IPs_for_an_AWS_interface.pdf) on the Fortinet AWS micro site.
 
 **Note:** The number of secondary IPs configured on both FortiGate instances public interface should match for EIP failover to work as expected.
 
   - **Are multiple routes for ENI0 or ENI1 supported?**
+
 Yes.  The Lambda function will move any routes (regardless of the network CIDR) found in any AWS route table(s) for the current VPC that are referencing any of the active instance ENIs.
 
   - **When I deployed the template, FortiGate2 is the active instance instead of FortiGate1.**
+
 Depending on the when both FortiGate instances fully boot up, FortiGate1 can fail a TCP health check while FortiGate2 passes.  So the Lambda function works as expected and fails over the AWS SDN to reference FortiGate2 in this scenario.
 
   - **What are the expected CloudWatch logs when both instances are passing health checks?**
