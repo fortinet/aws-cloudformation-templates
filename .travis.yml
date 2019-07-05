@@ -1,5 +1,6 @@
 language: bash
 script:
+  - echo $TRAVIS_BRANCH
   - mkdir -p ../template
   - find . -name '*.json' -exec cp --parents \{\} ../template \;
   - ls ../template
@@ -13,6 +14,7 @@ deploy:
   acl: public_read
   skip_cleanup: true
   local_dir: ../template
+  upload-dir: $TRAVIS_BRANCH latest
   on:
     all_branches: true
 # The S3 bucket should open public access
