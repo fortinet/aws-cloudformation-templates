@@ -1,5 +1,21 @@
 # FortiOS FGCP HA A-P in AWS
 
+## Launch FGT AP HA ExistingVPC BYOL.template
+
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=lambda-fgt-ap-ha-existingvpc-byol&templateURL=https://s3-us-west-2.amazonaws.com/fortinet-aws-cloudformation-templates/HA/6.0/FGT_AP_HA_ExistingVPC_BYOL.template.json"><img alt="Launch Stack" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+
+## Launch FGT AP HA ExistingVPC PAYG.template
+
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=lambda-fgt-ap-ha-existingvpc-payg&templateURL=https://s3-us-west-2.amazonaws.com/fortinet-aws-cloudformation-templates/HA/6.0/FGT_AP_HA_ExistingVPC_PAYG.template.json"><img alt="Launch Stack" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+
+## Launch FGT AP HA NewVPC BYOL.template
+
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=lambda-fgt-ap-ha-newvpc-byol&templateURL=https://s3-us-west-2.amazonaws.com/fortinet-aws-cloudformation-templates/HA/6.0/FGT_AP_HA_NewVPC_BYOL.template.json"><img alt="Launch Stack" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+
+## Launch FGT AP HA NewVPC PAYG.template
+
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=lambda-fgt-ap-ha-newvpc-payg&templateURL=https://s3-us-west-2.amazonaws.com/fortinet-aws-cloudformation-templates/HA/6.0/FGT_AP_HA_NewVPC_PAYG.template.json"><img alt="Launch Stack" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+
 ## Table of Contents
   - [Overview](./README.md#overview)
   - [Solution Components](./README.md#solution-components)
