@@ -1,23 +1,34 @@
 language: bash
 script:
-  - echo $TRAVIS_BRANCH
   - mkdir -p ../template
   - find . -name '*.json' -exec cp --parents \{\} ../template \;
   - ls ../template
 # Only keep json files uploading to S3
 deploy:
-  provider: s3
-  access_key_id: $AWS_ACCESS_KEY_ID
-  secret_access_key: $AWS_SECRET_ACCESS_KEY
-  region: us-west-2
-  bucket: fortinet-aws-cloudformation-templates
-  acl: public_read
-  skip_cleanup: true
-  local_dir: ../template
-  upload-dir: $TRAVIS_BRANCH latest
-  on:
-    all_branches: true
+  - provider: s3
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_SECRET_ACCESS_KEY
+    region: us-west-2
+    bucket: fortinet-aws-cloudformation-templates
+    acl: public_read
+    skip_cleanup: true
+    local_dir: ../template
+    upload-dir: $TRAVIS_BRANCH
+    on:
+      all_branches: true
+  - provider: s3
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_SECRET_ACCESS_KEY
+    region: us-west-2
+    bucket: fortinet-aws-cloudformation-templates
+    acl: public_read
+    skip_cleanup: true
+    local_dir: ../template
+    upload-dir: latest
+    on:
+      all_branches: true
 # The S3 bucket should open public access
+# Upload to both version folder and latest folder
 branches:
   only:
     - /^(v|V)?(\d+\.)+\d+$/
