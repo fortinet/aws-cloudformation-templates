@@ -1,0 +1,22 @@
+language: bash
+script:
+  - mkdir -p ../template
+  - find . -name '*.json' -exec cp --parents \{\} ../template \;
+  - ls ../template
+# Only keep json files uploading to S3
+deploy:
+  provider: s3
+  access_key_id: $AWS_ACCESS_KEY_ID
+  secret_access_key: $AWS_SECRET_ACCESS_KEY
+  region: us-west-2
+  bucket: fortinet-aws-cloudformation-templates
+  acl: public_read
+  skip_cleanup: true
+  local_dir: ../template
+  on:
+    all_branches: true
+# The S3 bucket should open public access
+branches:
+  only:
+    - /^(v|V)?(\d+\.)+\d+$/
+# Only triggered by releasing with version tag (eg. v1.2.0 or 1.2.0)
