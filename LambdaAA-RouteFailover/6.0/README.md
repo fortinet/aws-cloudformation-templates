@@ -1,5 +1,13 @@
 # Lambda A-A failover for AWS Routes 
 
+## Launch FGT LambdaAA-RouteFailover ExistingVPC BYOL.template
+
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=lambda-fgt-lambdaaa-routefailover-existingvpc-byol&templateURL=https://s3-us-west-2.amazonaws.com/fortinet-aws-cloudformation-templates/latest/LambdaAA-RouteFailover/6.0/FGT_LambdaAA-RouteFailover_ExistingVPC_BYOL.template.json"><img alt="Launch Stack" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+
+## Launch FGT LambdaAA-RouteFailover ExistingVPC PAYG.template
+
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=lambda-fgt-lambdaaa-routefailover-existingvpc-payg&templateURL=https://s3-us-west-2.amazonaws.com/fortinet-aws-cloudformation-templates/latest/LambdaAA-RouteFailover/6.0/FGT_LambdaAA-RouteFailover_ExistingVPC_PAYG.template.json"><img alt="Launch Stack" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+
 ## Table of Contents
   - [Overview](./README.md#overview)
   - [Solution Components](./README.md#solution-components)

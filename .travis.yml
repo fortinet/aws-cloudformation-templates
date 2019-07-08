@@ -1,0 +1,39 @@
+language: bash
+script:
+  - mkdir -p ../template
+  - find . -name '*.json' -exec cp --parents \{\} ../template \;
+  - ls ../template
+# Only keep json files uploading to S3
+deploy:
+  - provider: s3
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_SECRET_ACCESS_KEY
+    region: us-west-2
+    bucket: fortinet-aws-cloudformation-templates
+    acl: public_read
+    skip_cleanup: true
+    local_dir: ../template
+    upload-dir: $TRAVIS_BRANCH
+    on:
+      all_branches: true
+  - provider: s3
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_SECRET_ACCESS_KEY
+    region: us-west-2
+    bucket: fortinet-aws-cloudformation-templates
+    acl: public_read
+    skip_cleanup: true
+    local_dir: ../template
+    upload-dir: latest
+    on:
+      all_branches: true
+# The S3 bucket should open public access
+# Upload to both version folder and latest folder
+branches:
+  only:
+    - /^(v|V)?(\d+\.)+\d+/
+# Only triggered by releasing with version tag (eg. v1.2.0 or 1.2.0 or 1.2.0-beta)
+env:
+ global:
+ - secure: XK0QXOv/huRVKFrErQ+Y3s1Fv909WYzaognLK9bpwtvDe7AqxAhpDjXiZwJB02pJ0oi0btooxfK/4GY3bkv1W8DZyQ7QrdZ10AYMFcrAuz3X4yQfRniBJLkuKk4pmOCH4xU9b5OVZZ78cX5XJDw9NEClgmPH0EYSwNDLfQcTVC0ora3VGvRibU0pG3ZNsHcw8vN1fmQTmwfXpaFpjHLdT4xYbMoMpZJsp/lIwSzWtwIG3fp3Riqm7RLXqulUcCtso9IRNphk9S1xoGxTvR1v7AzPml8aZBUv0mvEt7j0+7G7oiecXEb4Ocxujtz0xMy5BGM0TyYGdPUvfwi0g73iafoSTeMbAQAoYCgsALgOedB+XU1zP+kJNYdmB+BOqw5fY4pA8DhkhuGTaZNzwDhYsdV5HmIt0dSbMNe0cRO7OygX/TBxOfjgaUQYxGzO+0CcNNpIf3FMzZByeAhHjBZha9JAK41bzAYJ6DkZmf4cO9jZKZz5dA0fLFBCmd2AER4q7DYi5tSqB8ZoUz/0Gb6GAsk7TcSfNu8Zib0qXdx8LJSGKqAiDSOpx5wRI09Bqt/suqDWZQBSJK/uL48yTlVEOYPaa4vWvwOcSZ2g8EH+MY0PWCms/qAoxwVs0at3mWJhPe5GMJY9EAdfNqsRqusvS2B2b51V4Z2pa7xfDHsCSZM=
+ - secure: ZLx5b7dg9uqK+xJABGrLCGNtmbyzd50jBq/F3AQGQcYyNBh3XhiAc3j7T/Nv8pfEp6asczbNljpvKtzbanAfpUjpL59Ta5BatI3ju+mMXLYBOfCyojUyEr6ZzjeU3jF+rMdjGOUcDPzwrHc6r6erSExu05rJvBrEWJBp3htHK80TLLN6j+PL3eYRGd5Q5FxUP/5RvXQYwcnZtcKWluSmwjFA/ZRQSUglv0kSjnlImIHLVgrtF8evnAF5I1+73pYkeg1n0jabVf2iUIq8ksflQdL1bkKXv0HtExXGxNdeI5rOnFioHoj+YBwQnuqqDwnFK3ySqo2t5WBwG6t6sgI7iAL+E5Kg7Xy95GvbptrVTMHzu3U1TjZSZukQa6xlZQke1y+JDz2rVhv1EvDVmAJ6Mgvh+cQh22gjAr9a9v+YOji4t92959m8qtNOQokhxq5Mp09WKWQp3rU26dae2hZgouUEpHpl2h2unA4/QEhbwI9gr+oyufpwIEZv8N4i4KinquVrCLVcJZISz9Gbuv2q8VFsKYfAcIQ/wechFPBNAeKk7hyROqkw5oZCl7qsRzZBys2aV33IGmDQzUYgSFOw7eD5xYYevymQJaRhJN37UeZ9Pq1oHz9YBgm4PIZ4wK9JeImynK0N24rwm3xdIMFlLL9leYjEMnkhOT1eYXaYW0M=

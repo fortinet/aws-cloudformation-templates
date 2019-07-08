@@ -1,5 +1,13 @@
 # Lambda A-P failover for AWS EIP & Routes 
 
+## Launch FGT LambdaAP-EIP+RouteFailover ExistingVPC BYOL.template
+
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=lambda-fgt-lambdaap-eip-routefailover-existingvpc-byol&templateURL=https://s3-us-west-2.amazonaws.com/fortinet-aws-cloudformation-templates/latest/LambdaAP-EIP+RouteFailover/6.0/FGT_LambdaAP-EIP+RouteFailover_ExistingVPC_BYOL.template.json"><img alt="Launch Stack" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+
+## Launch FGT LambdaAP-EIP+RouteFailover ExistingVPC PAYG.template
+
+<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=lambda-fgt-lambdaap-eip-routefailover-existingvpc-payg&templateURL=https://s3-us-west-2.amazonaws.com/fortinet-aws-cloudformation-templates/latest/LambdaAP-EIP+RouteFailover/6.0/FGT_LambdaAP-EIP+RouteFailover_ExistingVPC_PAYG.template.json"><img alt="Launch Stack" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+
 ## Table of Contents
   - [Overview](./README.md#overview)
   - [Solution Components](./README.md#solution-components)
