@@ -7,7 +7,7 @@
   - [Failover Process](./README.md#failover-process)
   - [CloudFormation Templates](./README.md#cloudformation-templates)
   - [Deployment](./README.md#deployment)
-  - [FAQ \ Tshoot](./README.md#faq--tshoot)
+  - [FAQ \ Tshoot](./README.md#faq--troubleshoot)
 
 ## Overview
 FortiOS now supports using FGCP (FortiGate Clustering Protocol) in unicast form to provide an active-passive clustering solution for deployments in AWS.  This feature shares a majority of the functionality that FGCP on FortiGate hardware provides with key changes to support AWS SDN (Software Defined Networking).
@@ -154,7 +154,7 @@ Before attempting to create a stack with the templates, a few prerequisites shou
 2.	The solution requires 3 EIPs to be created so ensure the AWS region being used has available capacity.  Reference [AWS Documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-resource-limits.html) for more information on EC2 resource limits and how to request increases.
 3.	If BYOL licensing is to be used, ensure these licenses have been registered on the support site.  Reference the VM license registration process PDF in this [KB Article](http://kb.fortinet.com/kb/microsites/search.do?cmd=displayKC&docType=kc&externalId=FD32312).
 4.   **Create a new S3 bucket in the same region where the template will be deployed.  If the bucket is in a different region than the template deployment, bootstrapping will fail and the FGTs will be unaccessable**.
-5.  If BYOL licensing is to be used, upload these licenses to the root directory of the same S3 bucket from the step above.  
+5.  If BYOL licensing is to be used, upload these licenses to the root directory of the same S3 bucket from the step above.
 6.  **Ensure that an S3 gateway endpoint is deployed and assigned to the PublicSubnet's AWS route table.**  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/vpce-gateway.html#create-gateway-endpoint) for further information.
 7.  **Ensure that both the PublicSubnet's and HAmgmtSubnet's AWS route table has a default route to an AWS Internet Gateway.**  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Route_Tables.html#route-tables-internet-gateway) for further information.
 
@@ -255,7 +255,7 @@ Once the prerequisites have been satisfied, login to your account in the AWS con
 24.  This concludes the template deployment example.
 ----
 
-## FAQ \ Tshoot
+## FAQ \ Troubleshoot
   - **Does FGCP support having multiple Cluster EIPs and secondary IPs on ENI0\port1?**
 
 Yes.  FGCP will move over any secondary IPs associated to ENI0\port1 and EIPs associated to those secondary IPs to the new master FortiGate instance.  In order to configure additional secondary IPs on the ENI and in FortiOS for port1, reference this [use-case guide](https://www.fortinet.com/content/dam/fortinet/assets/solutions/aws/Fortinet_Multiple_Public_IPs_for_an_AWS_interface.pdf) on the Fortinet AWS micro site.
