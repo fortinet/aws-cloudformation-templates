@@ -405,7 +405,55 @@
 				]
 			}
 		},
-		"Route1": {
+		"PrivateRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"PrivateRouteTable"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"HASyncRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"HASyncRouteTable"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"PublicRoute1": {
 			"Type": "AWS::EC2::Route",
 			"DependsOn": "AttachGateway",
 			"Properties": {
@@ -418,7 +466,7 @@
 				}
 			}
 		},
-		"SubnetRouteTableAssociation1": {
+		"PublicSubnetRouteTableAssociation1": {
 			"Type": "AWS::EC2::SubnetRouteTableAssociation",
 			"Properties": {
 				"SubnetId": {
@@ -429,7 +477,7 @@
 				}
 			}
 		},
-		"SubnetRouteTableAssociation2": {
+		"PublicSubnetRouteTableAssociation2": {
 			"Type": "AWS::EC2::SubnetRouteTableAssociation",
 			"Properties": {
 				"SubnetId": {
@@ -440,7 +488,7 @@
 				}
 			}
 		},
-		"SubnetRouteTableAssociation3": {
+		"PublicSubnetRouteTableAssociation3": {
 			"Type": "AWS::EC2::SubnetRouteTableAssociation",
 			"Properties": {
 				"SubnetId": {
@@ -451,7 +499,7 @@
 				}
 			}
 		},
-		"SubnetRouteTableAssociation4": {
+		"PublicSubnetRouteTableAssociation4": {
 			"Type": "AWS::EC2::SubnetRouteTableAssociation",
 			"Properties": {
 				"SubnetId": {
@@ -459,6 +507,50 @@
 				},
 				"RouteTableId": {
 					"Ref": "PublicRouteTable"
+				}
+			}
+		},
+		"PrivateSubnetRouteTableAssociation1": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PrivateSub1"
+				},
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				}
+			}
+		},
+		"PrivateSubnetRouteTableAssociation2": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PrivateSub2"
+				},
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				}
+			}
+		},
+		"HASyncSubnetRouteTableAssociation1": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "HASyncSub1"
+				},
+				"RouteTableId": {
+					"Ref": "HASyncRouteTable"
+				}
+			}
+		},
+		"HASyncSubnetRouteTableAssociation2": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "HASyncSub2"
+				},
+				"RouteTableId": {
+					"Ref": "HASyncRouteTable"
 				}
 			}
 		}
