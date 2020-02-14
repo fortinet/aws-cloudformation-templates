@@ -1227,8 +1227,8 @@
 				"LicenseType": {
 					"Fn::If": [
 						"LicenseTypeBYOL",
-						"FortiGate-VM64-AWS *(6.2.1)*",
-						"FortiGate-VM64-AWSONDEMAND *(6.2.1)*"
+						"FortiGate-VM64-AWS *(6.2.*)*",
+						"FortiGate-VM64-AWSONDEMAND *(6.2.*)*"
 					]
 				}
 			}
