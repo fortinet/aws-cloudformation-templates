@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "(v4.1) AWS CFT to deploy a FGCP based Active-Passive HA solution with two FortiGates in two AZs",
+	"Description": "(v4.3) AWS CFT to deploy a FGCP based Active-Passive HA solution with two FortiGates in two AZs",
 	"Metadata": {
 		"AWS::CloudFormation::Interface": {
 			"ParameterGroups": [
@@ -256,6 +256,7 @@
 			"Type": "String",
 			"Description": "Select the Region where the Init S3 Bucket exists *** the bucket should exist in the same region as this deployment for successful bootstrapping ***",
 			"AllowedValues": [
+				"ap-east-1",
 				"ap-northeast-1",
 				"ap-northeast-2",
 				"ap-south-1",
@@ -267,6 +268,7 @@
 				"eu-west-1",
 				"eu-west-2",
 				"eu-west-3",
+				"me-south-1",
 				"sa-east-1",
 				"us-east-1",
 				"us-east-2",
@@ -1177,7 +1179,7 @@
 								"    try:",
 								"        resp = client.describe_images(",
 								"            Filters=[{'Name': 'name', 'Values': [event['ResourceProperties']['LicenseType']]}],",
-								"            Owners=['679593333241']",
+								"            Owners=['679593333241', '464423754048', '211372476111']",
 								"        )",
 								"    except Exception as error:",
 								"        logger.error('<--!! Exception: {}'.format(error))",
