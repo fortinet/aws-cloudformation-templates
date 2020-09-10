@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "(v4.3) AWS CFT to deploy a FGCP based Active-Passive HA solution with two FortiGates in two AZs",
+	"Description": "(v5.1) AWS CFT to deploy a FGCP based Active-Passive HA solution with two FortiGates in two AZs",
 	"Metadata": {
 		"AWS::CloudFormation::Interface": {
 			"ParameterGroups": [
@@ -28,13 +28,10 @@
 					"Parameters": [
 						"InstanceType",
 						"CIDRForInstanceAccess",
-						"AZForFGT1",
-						"AZForFGT2",
 						"KeyPair",
 						"S3EndpointDeployment",
 						"PublicSubnet2RouteTableID",
 						"InitS3Bucket",
-						"InitS3BucketRegion",
 						"LicenseType",
 						"FortiGate1LicenseFile",
 						"FortiGate2LicenseFile",
@@ -227,17 +224,9 @@
 			"Type": "AWS::EC2::KeyPair::KeyName",
 			"Description": "Select a keypair to associate with the FortiGates"
 		},
-		"AZForFGT1": {
-			"Type": "AWS::EC2::AvailabilityZone::Name",
-			"Description": "Select an Availability Zone for FortiGate1"
-		},
-		"AZForFGT2": {
-			"Type": "AWS::EC2::AvailabilityZone::Name",
-			"Description": "Select an Availability Zone for FortiGate2"
-		},
 		"S3EndpointDeployment": {
 			"Type": "String",
-			"Description": "Select if a new S3 Endpoint should be deployed or not. *** A S3 Endpoint should be used and associated to both PublicSubnets for successful bootstrapping ***",
+			"Description": "Select if a new S3 Endpoint should be deployed or not. If you used the BaseVPC template then select UseExisting.  *** A S3 Endpoint should be used and associated to both PublicSubnets for successful bootstrapping ***",
 			"AllowedValues": [
 				"DeployNew",
 				"UseExisting"
@@ -250,31 +239,7 @@
 		"InitS3Bucket": {
 			"Type": "String",
 			"MinLength": "1",
-			"Description": "Provide the Init S3 Bucket name, where your config files will be created"
-		},
-		"InitS3BucketRegion": {
-			"Type": "String",
-			"Description": "Select the Region where the Init S3 Bucket exists *** the bucket should exist in the same region as this deployment for successful bootstrapping ***",
-			"AllowedValues": [
-				"ap-east-1",
-				"ap-northeast-1",
-				"ap-northeast-2",
-				"ap-south-1",
-				"ap-southeast-1",
-				"ap-southeast-2",
-				"ca-central-1",
-				"eu-central-1",
-				"eu-north-1",
-				"eu-west-1",
-				"eu-west-2",
-				"eu-west-3",
-				"me-south-1",
-				"sa-east-1",
-				"us-east-1",
-				"us-east-2",
-				"us-west-1",
-				"us-west-2"
-			]
+			"Description": "Provide the Init S3 Bucket name, where your config files will be created  *** the bucket should exist in the same region as this deployment for successful bootstrapping ***"
 		},
 		"LicenseType": {
 			"Type": "String",
@@ -521,7 +486,7 @@
 								" : ",
 								"\"",
 								{
-									"Ref": "InitS3BucketRegion"
+									"Ref": "AWS::Region"
 								},
 								"\"",
 								",\n",
@@ -619,7 +584,7 @@
 								"',\n",
 								"'region' : '",
 								{
-									"Ref": "InitS3BucketRegion"
+									"Ref": "AWS::Region"
 								},
 								"',\n",
 								"'license' : '/",
@@ -1175,16 +1140,23 @@
 								"client = boto3.client('ec2')",
 								"",
 								"def handler(event, context):",
-								"    logger.info('<-- event received: {}'.format(json.dumps(event)))",
+								"    if event['RequestType'] == 'Create':",
+								"        logger.info('<-- event received: {}'.format(json.dumps(event)))",
+								"    else:",
+								"        responseData = {'msg':'200'}",
+								"        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
+								"        return None",
+								"",
 								"    try:",
 								"        resp = client.describe_images(",
 								"            Filters=[{'Name': 'name', 'Values': [event['ResourceProperties']['LicenseType']]}],",
-								"            Owners=['679593333241', '464423754048', '211372476111']",
+								"            Owners=['679593333241', '464423754048', '211372476111', '345084742485', '874634375141']",
 								"        )",
 								"    except Exception as error:",
 								"        logger.error('<--!! Exception: {}'.format(error))",
 								"        responseData = {'msg':'error'}",
 								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								"",
 								"    if resp['ResponseMetadata']['HTTPStatusCode'] == 200 and resp['Images'] != []:",
 								"        ami_dict = {}",
 								"        ami_list = []",
@@ -1254,6 +1226,14 @@
 								"s3 = boto3.client('s3')",
 								"",
 								"template = '''\\",
+								"config system vdom-exception",
+								"edit 1",
+								"set object system.interface",
+								"next",
+								"edit 2",
+								"set object router.static",
+								"next",
+								"end",
 								"config system global",
 								"set hostname {Hostname}",
 								"set admintimeout 60",

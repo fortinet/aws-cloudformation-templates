@@ -35,7 +35,7 @@ A FortiGate FGCP cluster appears as a single logical FortiGate instance and conf
 
 The FortiGate instances will use multiple interfaces for data plane and control plane traffic to achieve FGCP clustering in an AWS VPC.  The FortiGate instances require four ENIs for this solution to work as designed so make sure to use an AWS EC2 instance type that supports this.   Reference AWS Documentation for further information on this.
 
-For data plane functions the FortiGates will use two dedicated ENIs, one for a public interface (ie ENI0\port1) and another for a private interface (ie ENI1\port2).  These ENIs will utilize primary IP addressing and FortiOS will not sync the interface configuration (config system interface) or static routes (config router static) as these FGTs are in seperate subnets.  Thus when configuring these items, you should do so individually on both FortiGates.
+For data plane functions the FortiGates will use two dedicated ENIs, one for a public interface (ie ENI0\port1) and another for a private interface (ie ENI1\port2).  These ENIs will utilize primary IP addressing and FortiOS should not sync the interface configuration (config system interface) or static routes (config router static) as these FGTs are in seperate subnets.  This is controlled via the CLI (config system vdom-exception). Thus when configuring these items, you should do so individually on both FortiGates.
 
 A cluster EIP will be associated to the primary IP of the public interface (ie ENI0\port1) of the current master FortiGate instance and will be reassociated to a new master FortiGate instance as well.
 
@@ -46,6 +46,14 @@ The FortiGates will also use another dedicated ENI (ie ENI3\port4) for HA manage
 The FortiGates are configured to use the unicast version of FGCP by applying the configuration below on both the master and slave FortiGate instances.  This configuration is automatically configured and bootstrapped to the instances when deployed by the provided CloudFormation Templates.
 
 #### Example Master FGCP Configuration:
+    config system vdom-exception
+    edit 1
+    set object sytem.interface
+    next
+    edit 2
+    set object router.static
+    next
+    end
     config system ha
     set group-name "group1"
     set mode a-p
@@ -65,6 +73,14 @@ The FortiGates are configured to use the unicast version of FGCP by applying the
     end
 
 #### Example Slave FGCP Configuration:
+    config system vdom-exception
+    edit 1
+    set object sytem.interface
+    next
+    edit 2
+    set object router.static
+    next
+    end
     config system ha
     set group-name "group1"
     set mode a-p
@@ -127,7 +143,7 @@ In this section the parameters will request general information for existing VPC
 ![Example Diagram](./content/params2.png)
 
 ### FortiGate Instance Configuration
-For this section the variables will request general instance information such as instance type, key pair, and Availability Zone to deploy the instances into.  Also FortiOS specific information will be requested such as if an S3 endpoint should be deployed, init S3 bucket, bucket region, and FortiGate License filenames.  **Ensure that an S3 gateway endpoint is deployed and assigned to the PublicSubnet's AWS route table or bootstrapping will fail.** Additional items such as the and IP addresses for AWS resources within the VPC such as the IP of the AWS intrinsic router for the public, private, and HAmgmt subnets.  The AWS intrinsic router is always the first host IP for each subnet.  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Subnets.html#VPC_Sizing) for further information on host IPs used by AWS services within a subnet.
+For this section the variables will request general instance information such as instance type and key pair to use for deploying the instances.  Also FortiOS specific information will be requested such as if an S3 endpoint should be deployed, init S3 bucket, bucket region, and FortiGate License filenames.  **Ensure that an S3 gateway endpoint is deployed and assigned to the PublicSubnet's AWS route table or bootstrapping will fail.** Additional items such as the and IP addresses for AWS resources within the VPC such as the IP of the AWS intrinsic router for the public, private, and HAmgmt subnets.  The AWS intrinsic router is always the first host IP for each subnet.  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Subnets.html#VPC_Sizing) for further information on host IPs used by AWS services within a subnet.
 
 ![Example Diagram](./content/params3.png)
 
@@ -146,7 +162,7 @@ Before attempting to create a stack with the templates, a few prerequisites shou
 3.	If BYOL licensing is to be used, ensure these licenses have been registered on the support site.  Reference the VM license registration process PDF in this [KB Article](http://kb.fortinet.com/kb/microsites/search.do?cmd=displayKC&docType=kc&externalId=FD32312).
 4.   **Create a new S3 bucket in the same region where the template will be deployed.  If the bucket is in a different region than the template deployment, bootstrapping will fail and the FGTs will be unaccessable**.
 5.  If BYOL licensing is to be used, upload these licenses to the root directory of the same S3 bucket from the step above.
-6.  **Ensure that an S3 gateway endpoint is deployed and assigned to both of the PublicSubnet's AWS route table.**  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/vpce-gateway.html#create-gateway-endpoint) for further information.
+6.  **Ensure that an S3 gateway endpoint is deployed and assigned to both of the PublicSubnet's AWS route table.**  If you are using the 'BaseVPC_FGCP_DualAZ.template.json' template, then this is already deployed for you.  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/vpce-gateway.html#create-gateway-endpoint) for further information.
 7.  **Ensure that all of the PublicSubnet's and HAmgmtSubnet's AWS route tables have a default route to an AWS Internet Gateway.**  Reference [AWS Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Route_Tables.html#route-tables-internet-gateway) for further information.
 
 Once the prerequisites have been satisfied, login to your account in the AWS console and proceed with the deployment steps below.
@@ -168,7 +184,7 @@ Once the prerequisites have been satisfied, login to your account in the AWS con
 
 ![Example Diagram](./content/deploy4.png)
 
-5.  In the FortiGate Instance Configuration parameters section, we have selected an Availability Zone and Key Pair to use for the FortiGates as well as BYOL licensing.  Notice we are prompted for if an S3 endpoint should be deployed, the public subnet's route table ID for the new S3 endpoint, the InitS3Bucket, InitS3BucketRegion, License Types, FortiGate1LicenseFile, and FortiGate2LicenseFile parameters.  For the values we are going to reference the S3 bucket and relevant information from the deployment prerequisite step 4.
+5.  In the FortiGate Instance Configuration parameters section, we have selected an Instance Type and Key Pair to use for the FortiGates as well as BYOL licensing.  Notice we are prompted for if an S3 endpoint should be deployed, the InitS3Bucket, License Types, FortiGate1LicenseFile, and FortiGate2LicenseFile parameters.  For the values we are going to reference the S3 bucket and relevant information from the deployment prerequisite step 4.
 
 ![Example Diagram](./content/deploy5.png)
 
@@ -245,7 +261,7 @@ Once the prerequisites have been satisfied, login to your account in the AWS con
 ## FAQ \ Troubleshoot
   - **Does FGCP support having multiple Cluster EIPs and secondary IPs on ENI0\port1?**
 
-Yes.  FGCP will move over any secondary IPs associated to ENI0\port1 and EIPs associated to those secondary IPs to the new master FortiGate instance.  In order to configure additional secondary IPs on the ENI and in FortiOS for port1, reference this [use-case guide](https://www.fortinet.com/content/dam/fortinet/assets/solutions/aws/Fortinet_Multiple_Public_IPs_for_an_AWS_interface.pdf) on the Fortinet AWS micro site.
+Yes.  FGCP will move over any secondary IPs associated to ENI0\port1 and EIPs associated to those secondary IPs to the new master FortiGate instance.  In order to configure additional secondary IPs on the ENI and in FortiOS for port1, you will need to use static IP addressing on the interface.  Reference the FortiOS Handbook on the [Fortinet Documentation site](https://docs.fortinet.com/).
 
   - **Does FGCP support having multiple routes for ENI1\port2?**
 
@@ -279,6 +295,14 @@ This can be disabled with the following CLI commands:
 ```
 diag deb app awsd 0
 diag deb disable
+```
+
+  - **Is it possible to validate that both FortiGate instances are able to assume the IAM instance role and successfully and access AWS EC2 API endpoints without a failover event?.**
+
+Yes.  You can run the following command on either FortiGate to confirm availability.  Remember that all DNS queries and HTTPS calls to AWS EC2 API endpoints will be sent out of the HAmgmt interfaces.  To get more verbose output, you can use the diag debu commands shown above.
+
+```
+diag test app awsd 4
 ```
 
   - **Is it possible to remove direct internet access from the HAmgmt subnet and provide private AWS EC2 API access via a VPC interface endpoint?**

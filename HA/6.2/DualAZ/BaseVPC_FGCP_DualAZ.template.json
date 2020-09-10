@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "(v1.1) AWS CFT to deploy a VPC with 4 subnets (Public, Private, HAsync, and HAmgmt) accross 2x Availability Zones.",
+	"Description": "(v2.0) AWS CFT to deploy a VPC with 4 subnets (Public, Private, HAsync, and HAmgmt) across 2x Availability Zones.",
 	"Metadata": {
 		"AWS::CloudFormation::Interface": {
 			"ParameterGroups": [
@@ -19,7 +19,10 @@
 						"PublicSubnet2",
 						"PrivateSubnet2",
 						"HASyncSubnet2",
-						"HAMgmtSubnet2"
+						"HAMgmtSubnet2",
+						"TgwAttachSubnets",
+						"TgwAttachSubnet1",
+						"TgwAttachSubnet2"
 					]
 				}
 			]
@@ -78,9 +81,35 @@
 			"Type": "String",
 			"Default": "10.0.40.0/24",
 			"Description": "Provide a network CIDR for HAMgmtSubnet2"
+		},
+		"TgwAttachSubnets": {
+			"Type": "String",
+			"Description": "Select Yes if you plan to attach this VPC to Transit GW with a VPC attachment.  If Yes is selected 2 additional subnets and a route table will be created",
+			"AllowedValues": [
+				"Yes",
+				"No"
+			]
+		},
+		"TgwAttachSubnet1": {
+			"Type": "String",
+			"Default": "10.0.5.0/24",
+			"Description": "Provide a network CIDR for TgwAttachSubnet1"
+		},
+		"TgwAttachSubnet2": {
+			"Type": "String",
+			"Default": "10.0.50.0/24",
+			"Description": "Provide a network CIDR for TgwAttachSubnet2"
 		}
 	},
 	"Conditions": {
+		"CreateTgwAttachSubnets": {
+			"Fn::Equals": [
+				{
+					"Ref": "TgwAttachSubnets"
+				},
+				"Yes"
+			]
+		}
 	},
 	"Resources": {
 		"VPCID": {
@@ -349,6 +378,68 @@
 				]
 			}
 		},
+		"TgwAttachSub1": {
+			"Type": "AWS::EC2::Subnet",
+			"Condition": "CreateTgwAttachSubnets",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"CidrBlock": {
+					"Ref": "TgwAttachSubnet1"
+				},
+				"AvailabilityZone": {
+					"Ref": "AZForSubnet1"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"TgwAttachSubnet1"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"TgwAttachSub2": {
+			"Type": "AWS::EC2::Subnet",
+			"Condition": "CreateTgwAttachSubnets",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"CidrBlock": {
+					"Ref": "TgwAttachSubnet2"
+				},
+				"AvailabilityZone": {
+					"Ref": "AZForSubnet2"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"TgwAttachSubnet2"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
 		"InternetGateway": {
 			"Type": "AWS::EC2::InternetGateway",
 			"Properties": {
@@ -398,6 +489,55 @@
 										"Ref": "AWS::StackName"
 									},
 									"PublicRouteTable"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"PrivateRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"PrivateRouteTable"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"TgwAttachRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Condition": "CreateTgwAttachSubnets",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"TgwAttachRouteTable"
 								]
 							]
 						}
@@ -459,6 +599,105 @@
 				},
 				"RouteTableId": {
 					"Ref": "PublicRouteTable"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation5": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PrivateSub1"
+				},
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation6": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "PrivateSub2"
+				},
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation7": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "HASyncSub1"
+				},
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation8": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "HASyncSub2"
+				},
+				"RouteTableId": {
+					"Ref": "PrivateRouteTable"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation9": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Condition": "CreateTgwAttachSubnets",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "TgwAttachSub1"
+				},
+				"RouteTableId": {
+					"Ref": "TgwAttachRouteTable"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation10": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Condition": "CreateTgwAttachSubnets",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "TgwAttachSub2"
+				},
+				"RouteTableId": {
+					"Ref": "TgwAttachRouteTable"
+				}
+			}
+		},
+		"S3Endpoint": {
+			"Type": "AWS::EC2::VPCEndpoint",
+			"Properties": {
+				"PolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": "*",
+							"Action": [
+								"s3:GetObject"
+							],
+							"Resource": [
+								"*"
+							]
+						}
+					]
+				},
+				"RouteTableIds": [
+					{
+						"Ref": "PublicRouteTable"
+					}
+				],
+				"ServiceName": {
+					"Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+				},
+				"VpcId": {
+					"Ref": "VPCID"
 				}
 			}
 		}
