@@ -27,6 +27,7 @@
 						"AZForInstances",
 						"KeyPair",
 						"S3EndpointDeployment",
+						"PrivateSubnetRouteTableID",
 						"PublicSubnetRouteTableID",
 						"InitS3Bucket",
 						"InitS3BucketRegion",
@@ -223,6 +224,10 @@
 				"UseExisting"
 			]
 		},
+		"PrivateSubnetRouteTableID": {
+			"Type": "String",
+			"Description": "To create a route table entry for internal traffic, provide the route table ID associated to PrivateSubnet2"
+		},
 		"PublicSubnetRouteTableID": {
 			"Type": "String",
 			"Description": "If a new S3 Endpoint is to be deployed, provide the route table ID associated to PublicSubnet"
@@ -378,25 +383,44 @@
 				]
 			}
 		},
-		"FortiGateSecGrp": {
+		"FortiGatePublicSecGrp": {
 			"Type": "AWS::EC2::SecurityGroup",
 			"Properties": {
 				"VpcId": {
 					"Ref": "VPCID"
 				},
-				"GroupDescription": "FortigateSecGrp",
+				"GroupDescription": "FortiGatePublicSecGrp",
 				"SecurityGroupIngress": [
 					{
-						"Description": "Allow remote access to FGT",
+						"Description": "Allow remote access to FGT for the public subnet",
 						"IpProtocol": "-1",
 						"FromPort": "0",
 						"ToPort": "65535",
 						"CidrIp": {
 							"Ref": "CIDRForInstanceAccess"
 						}
-					},
+					}
+				],
+				"Tags": [
 					{
-						"Description": "Allow local VPC access to FGT",
+						"Key": "Name",
+						"Value": {
+							"Fn::Sub": "${AWS::StackName}-public"
+						}
+					}
+				]
+			}
+		},
+		"FortiGatePrivateSecGrp": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"GroupDescription": "FortiGatePrivateSecGrp",
+				"SecurityGroupIngress": [
+					{
+						"Description": "Allow local VPC access to FGT for the private subnet",
 						"IpProtocol": "-1",
 						"FromPort": "0",
 						"ToPort": "65535",
@@ -404,22 +428,75 @@
 							"Ref": "VPCCIDR"
 						}
 					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Sub": "${AWS::StackName}-private"
+						}
+					}
 				]
 			}
 		},
-		"FortiGateSecGrpHArule": {
-			"DependsOn": "FortiGateSecGrp",
+		"FortiGateHAMgmtSecGrp": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"GroupDescription": "FortiGateHAMgmtSecGrp",
+				"SecurityGroupIngress": [
+					{
+						"Description": "Allow remote access to FGT for the HA management subnet",
+						"IpProtocol": "-1",
+						"FromPort": "0",
+						"ToPort": "65535",
+						"CidrIp": {
+							"Ref": "CIDRForInstanceAccess"
+						}
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Sub": "${AWS::StackName}-hamgmt"
+						}
+					}
+				]
+			}
+		},
+		"FortiGateHASyncSecGrp": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"GroupDescription": "FortigateHASyncSecGrp",
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Sub": "${AWS::StackName}-hasync"
+						}
+					}
+				]
+			}
+		},
+		"FortiGateHASyncSecGrpRule": {
+			"DependsOn": "FortiGateHASyncSecGrp",
 			"Type": "AWS::EC2::SecurityGroupIngress",
 			"Properties": {
 				"GroupId": {
-					"Ref": "FortiGateSecGrp"
+					"Ref": "FortiGateHASyncSecGrp"
 				},
-				"Description": "Allow FGTs to access each other",
+				"Description": "Allow FGTs to access each other via HA Sync subnet",
 				"IpProtocol": "-1",
 				"FromPort": "0",
 				"ToPort": "65535",
 				"SourceSecurityGroupId": {
-					"Ref": "FortiGateSecGrp"
+					"Ref": "FortiGateHASyncSecGrp"
 				}
 			}
 		},
@@ -620,7 +697,7 @@
 				"Description": "port1",
 				"GroupSet": [
 					{
-						"Ref": "FortiGateSecGrp"
+						"Ref": "FortiGatePublicSecGrp"
 					}
 				],
 				"SourceDestCheck": "false",
@@ -689,7 +766,7 @@
 				"Description": "port1",
 				"GroupSet": [
 					{
-						"Ref": "FortiGateSecGrp"
+						"Ref": "FortiGatePublicSecGrp"
 					}
 				],
 				"SourceDestCheck": "false",
@@ -791,7 +868,7 @@
 				"Description": "port2",
 				"GroupSet": [
 					{
-						"Ref": "FortiGateSecGrp"
+						"Ref": "FortiGatePrivateSecGrp"
 					}
 				],
 				"SourceDestCheck": "false",
@@ -856,7 +933,7 @@
 				"Description": "port2",
 				"GroupSet": [
 					{
-						"Ref": "FortiGateSecGrp"
+						"Ref": "FortiGatePrivateSecGrp"
 					}
 				],
 				"SourceDestCheck": "false",
@@ -900,7 +977,7 @@
 				"Description": "port3",
 				"GroupSet": [
 					{
-						"Ref": "FortiGateSecGrp"
+						"Ref": "FortiGateHASyncSecGrp"
 					}
 				],
 				"SourceDestCheck": "false",
@@ -944,7 +1021,7 @@
 				"Description": "port4",
 				"GroupSet": [
 					{
-						"Ref": "FortiGateSecGrp"
+						"Ref": "FortiGateHAMgmtSecGrp"
 					}
 				],
 				"SourceDestCheck": "false",
@@ -988,7 +1065,7 @@
 				"Description": "port3",
 				"GroupSet": [
 					{
-						"Ref": "FortiGateSecGrp"
+						"Ref": "FortiGateHASyncSecGrp"
 					}
 				],
 				"SourceDestCheck": "false",
@@ -1032,7 +1109,7 @@
 				"Description": "port4",
 				"GroupSet": [
 					{
-						"Ref": "FortiGateSecGrp"
+						"Ref": "FortiGateHAMgmtSecGrp"
 					}
 				],
 				"SourceDestCheck": "false",
@@ -1550,6 +1627,18 @@
 							"}"
 						]
 					]
+				}
+			}
+		},
+		"PrivateRoute1": {
+			"Type": "AWS::EC2::Route",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "PrivateSubnetRouteTableID"
+				},
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"NetworkInterfaceId": {
+					"Ref": "fgt1eni1"
 				}
 			}
 		}
