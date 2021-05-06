@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "(v4.3) AWS CFT to deploy a FGCP based Active-Passive HA solution with two FortiGates in the same AZ",
+	"Description": "(v4.4) AWS CFT to deploy a FGCP based Active-Passive HA solution with two FortiGates in the same AZ",
 	"Metadata": {
 		"AWS::CloudFormation::Interface": {
 			"ParameterGroups": [
@@ -1228,7 +1228,7 @@
 				},
 				"Timeout": 120,
 				"Handler": "index.handler",
-				"Runtime": "python2.7",
+				"Runtime": "python3.8",
 				"MemorySize": 128
 			}
 		},
@@ -1402,7 +1402,7 @@
 				},
 				"Timeout": 120,
 				"Handler": "index.handler",
-				"Runtime": "python2.7",
+				"Runtime": "python3.8",
 				"MemorySize": 128
 			}
 		},

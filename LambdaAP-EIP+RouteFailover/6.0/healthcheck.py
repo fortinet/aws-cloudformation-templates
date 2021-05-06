@@ -147,7 +147,7 @@ def reassign_eips(activemap, passivemap):
 def replace_routes(map, eni):
     logger.debug('--> Updating routes to target {}'.format(eni))
     try:
-        for key, value in map.iteritems():
+        for key, value in map.items():
             mrt, mroute, meni = value
             if eni:
                 response = ec2client.replace_route(NetworkInterfaceId=eni, RouteTableId=mrt, DestinationCidrBlock=mroute)

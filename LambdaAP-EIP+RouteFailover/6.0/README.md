@@ -1,4 +1,10 @@
-# Lambda A-P failover for AWS EIP & Routes 
+# Lambda A-P failover for AWS EIP & Routes
+
+# Deprecated Solution
+
+**Note:** This solution is now **deprecated** and should no longer be used for new deployments. FortiOS 6.0 and older is now at End of Engineering Support and there are no public 6.0 or older AMIs availble.
+
+For the latest recommended solutions such as dual AZ FGCP, TGW w/ VPN integrtation, or GWLB integration, please visit [www.fortinet.com/aws](https://www.fortinet.com/aws).  For the latest documentation on our public cloud solutions, please visit [docs.fortinet.com](https://docs.fortinet.com/).
 
 ## Launch FGT LambdaAP-EIP+RouteFailover ExistingVPC BYOL.template
 
@@ -317,3 +323,19 @@ START RequestId: 220dc11c-ccdf-11e8-b437-23bfba5d6ffb Version: $LATEST
 [INFO] 2018-10-10T22:52:16.649Z 220dc11c-ccdf-11e8-b437-23bfba5d6ffb -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
 END RequestId: 220dc11c-ccdf-11e8-b437-23bfba5d6ffb 
 ```
+
+  - **How do I update my lambda function from python 2.7 to 3.8?**
+In order to update your lambda function runtime from python 2.7 to 3.8, you need to validate that your lambda function has an existing environment variable called 'VPCEndpointURL'.  Below is an example to reference.
+![Example Diagram](./content/lambda1.png)
+
+If you are missing this environment variable, you need to get your EC2 VPC endpoint DNS name by navigating to your VPC console, endpoints, then find your EC2 endpoint for your VPC where the FGTs are deployed.  Copy the first DNS name, ie 'vpce-0f722ed926c686bd5-1lt2jdh3.ec2.us-east-2.vpce.amazonaws.com', as this will be used as part of the environment variable.
+![Example Diagram](./content/lambda2.png)
+
+Next, naviagte back to your lambda function and create the environment variable 'VPCEndpointURL' and for the value provide your VPC endpoint dns with 'https://' as a prefix.  So in our example your value would be 'https://vpce-0f722ed926c686bd5-1lt2jdh3.ec2.us-east-2.vpce.amazonaws.com'.
+
+Next, on your lambda function edit your runtime settings to use python 3.8.
+![Example Diagram](./content/lambda3.png)
+
+Finally upate your lambda function code for the healthcheck.py to match the latest version located [Here](/healthcheck.py).  Then click 'deploy' to push this to your lambda function.
+
+To confirm the operation of the lambda function, compare your cloudwatch logs to those referenced above for steady state, failover, and restoration events.

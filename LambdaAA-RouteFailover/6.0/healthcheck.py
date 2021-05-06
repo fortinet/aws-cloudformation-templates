@@ -77,7 +77,7 @@ class GetRoutes(object):
 def check_routes(routemap, az, eni):
     logger.debug('--> Checking routes in az {} point to {}'.format(az, eni))
     try:
-        for key, value in routemap.iteritems():
+        for key, value in routemap.items():
             rmrt, rmroute, rmeni = value
             if eni in rmeni:
                 logger.debug('<-- Matching Route Found: rt {} route {} point to {}'.
@@ -94,7 +94,7 @@ def check_routes(routemap, az, eni):
 def replace_routes(routemap, az, eni):
     logger.debug('--> Updating routes in az {} to target {}'.format(az, eni))
     try:
-        for key, value in routemap.iteritems():
+        for key, value in routemap.items():
             rmrt, rmroute, rmeni = value
             response = ec2client.replace_route(NetworkInterfaceId=eni, RouteTableId=rmrt,
                                                DestinationCidrBlock=rmroute)
@@ -143,7 +143,7 @@ def lambda_handler(event, context):
             replace_routes(az1routes.routemap, '1', az2eni)
         if az2routes.hit is True and check_routes(az2routes.routemap, '2', az2eni) is False:
             replace_routes(az2routes.routemap, '2', az2eni)
-    elif az1hc.status and az2hc.status is False:
+    elif (az1hc.status is False) and (az2hc.status is False):
         logger.error('!!-->> Both units are down: Bypassing route checks')
     logger.info('-=-' * 20)
 #

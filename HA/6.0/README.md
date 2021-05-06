@@ -1,5 +1,11 @@
 # FortiOS FGCP HA A-P in AWS
 
+# Deprecated Solution
+
+**Note:** This solution is now **deprecated** and should no longer be used for new deployments. FortiOS 6.0 and older is now at End of Engineering Support and there are no public 6.0 or older AMIs availble.
+
+For the latest recommended solutions such as dual AZ FGCP, TGW w/ VPN integrtation, or GWLB integration, please visit [www.fortinet.com/aws](https://www.fortinet.com/aws).  For the latest documentation on our public cloud solutions, please visit [docs.fortinet.com](https://docs.fortinet.com/).
+
 ## Launch FGT AP HA ExistingVPC BYOL.template
 
 <a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=lambda-fgt-ap-ha-existingvpc-byol&templateURL=https://s3-us-west-2.amazonaws.com/fortinet-aws-cloudformation-templates/latest/HA/6.0/FGT_AP_HA_ExistingVPC_BYOL.template.json"><img alt="Launch Stack" src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>

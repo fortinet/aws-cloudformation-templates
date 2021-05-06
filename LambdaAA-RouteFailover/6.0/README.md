@@ -1,4 +1,10 @@
-# Lambda A-A failover for AWS Routes 
+# Lambda A-A failover for AWS Routes
+
+# Deprecated Solution
+
+**Note:** This solution is now **deprecated** and should no longer be used for new deployments. FortiOS 6.0 and older is now at End of Engineering Support and there are no public 6.0 or older AMIs availble.
+
+For the latest recommended solutions such as dual AZ FGCP, TGW w/ VPN integrtation, or GWLB integration, please visit [www.fortinet.com/aws](https://www.fortinet.com/aws).  For the latest documentation on our public cloud solutions, please visit [docs.fortinet.com](https://docs.fortinet.com/).
 
 ## Launch FGT LambdaAA-RouteFailover ExistingVPC BYOL.template
 
@@ -282,24 +288,57 @@ Yes.  Additional route table IDs for each AZ can be added to the Lambda function
 
   - **What are the expected CloudWatch logs when both instances are passing health checks?**
 ```
-START RequestId: 95686482-cd7e-11e8-8b68-d3746dd4c444 Version: $LATEST
-[INFO] 2018-10-11T17:53:39.181Z 95686482-cd7e-11e8-8b68-d3746dd4c444 -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
-[INFO] 2018-10-11T17:53:39.182Z 95686482-cd7e-11e8-8b68-d3746dd4c444 <-- Host+Port 10.0.1.25:541 is UP = True
-[INFO] 2018-10-11T17:53:39.183Z 95686482-cd7e-11e8-8b68-d3746dd4c444 Resetting dropped connection: ec2.us-west-1.amazonaws.com
-[INFO] 2018-10-11T17:53:39.431Z 95686482-cd7e-11e8-8b68-d3746dd4c444 <-- Host+Port 10.0.3.200:541 is UP = True
-[INFO] 2018-10-11T17:53:39.514Z 95686482-cd7e-11e8-8b68-d3746dd4c444 -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
-END RequestId: 95686482-cd7e-11e8-8b68-d3746dd4c444 
+START RequestId: a25b8586-080e-4c1d-b72d-2b7565ded41d Version: $LATEST
+[INFO]	2021-05-06T16:41:19.753Z	a25b8586-080e-4c1d-b72d-2b7565ded41d	-=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
+[INFO] 2021-05-06T16:41:19.754Z a25b8586-080e-4c1d-b72d-2b7565ded41d >> Triggered by CloudWatch Scheduled Event <<
+[INFO] 2021-05-06T16:41:19.755Z a25b8586-080e-4c1d-b72d-2b7565ded41d <-- Host+Port 10.0.2.180:541 is UP = True
+[INFO] 2021-05-06T16:41:20.45Z a25b8586-080e-4c1d-b72d-2b7565ded41d <-- Host+Port 10.0.20.236:541 is UP = True
+[INFO] 2021-05-06T16:41:20.152Z a25b8586-080e-4c1d-b72d-2b7565ded41d -->> AZ1-FGT is up, AZ2-FGT is up: Checking routes point to correct AZ-FGT
+2021-05-06T12:41:20.152-04:00	[INFO] 2021-05-06T16:41:20.152Z a25b8586-080e-4c1d-b72d-2b7565ded41d -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
+END RequestId: a25b8586-080e-4c1d-b72d-2b7565ded41d
 ```
 
-  - **What are the expected CloudWatch logs when both instances are failing health checks?**
+  - **What are the expected CloudWatch logs when a failover occurs from AZ1 to AZ2?**
 ```
-START RequestId: 4877a097-cd7f-11e8-9904-9f802c79b117 Version: $LATEST
-[INFO] 2018-10-11T17:58:39.603Z 4877a097-cd7f-11e8-9904-9f802c79b117 -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
-[ERROR] 2018-10-11T17:58:44.608Z 4877a097-cd7f-11e8-9904-9f802c79b117 <--!! Exception in get_hc_status: timed out
-[INFO] 2018-10-11T17:58:44.609Z 4877a097-cd7f-11e8-9904-9f802c79b117 <-- Host+Port 10.0.1.25:541 is UP = False
-[INFO] 2018-10-11T17:58:44.610Z 4877a097-cd7f-11e8-9904-9f802c79b117 Resetting dropped connection: ec2.us-west-1.amazonaws.com
-[ERROR] 2018-10-11T17:58:49.855Z 4877a097-cd7f-11e8-9904-9f802c79b117 <--!! Exception in get_hc_status: timed out
-[INFO] 2018-10-11T17:58:49.855Z 4877a097-cd7f-11e8-9904-9f802c79b117 <-- Host+Port 10.0.3.200:541 is UP = False
-[INFO] 2018-10-11T17:58:49.941Z 4877a097-cd7f-11e8-9904-9f802c79b117 -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
-END RequestId: 4877a097-cd7f-11e8-9904-9f802c79b117 
+START RequestId: 2e159863-d3c0-46c5-8211-cda72a3b736f Version: $LATEST
+[INFO] 2021-05-06T16:44:18.829Z 2e159863-d3c0-46c5-8211-cda72a3b736f -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
+[INFO] 2021-05-06T16:44:18.829Z 2e159863-d3c0-46c5-8211-cda72a3b736f >> Triggered by CloudWatch Scheduled Event <<
+ERROR] 2021-05-06T16:44:23.834Z 2e159863-d3c0-46c5-8211-cda72a3b736f <--!! Exception in GetHealthCheckStatus: timed out
+[INFO] 2021-05-06T16:44:23.834Z 2e159863-d3c0-46c5-8211-cda72a3b736f <-- Host+Port 10.0.2.180:541 is UP = False
+[INFO] 2021-05-06T16:44:23.927Z 2e159863-d3c0-46c5-8211-cda72a3b736f <-- Host+Port 10.0.20.236:541 is UP = True
+ERROR] 2021-05-06T16:44:24.000Z 2e159863-d3c0-46c5-8211-cda72a3b736f -->> AZ1-FGT is down, AZ2-FGT is up: Moving routes to AZ2-FGT
+[ERROR] 2021-05-06T16:44:24.001Z 2e159863-d3c0-46c5-8211-cda72a3b736f -->> Triggering_CloudWatch_Failover_Alarm
+[INFO] 2021-05-06T16:44:24.128Z 2e159863-d3c0-46c5-8211-cda72a3b736f --> Updated 0.0.0.0/0 in rt rtb-0bae9c4c6426718dc to target eni-0d56addc6dd9b82d1
+[INFO] 2021-05-06T16:44:24.128Z 2e159863-d3c0-46c5-8211-cda72a3b736f -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
+END RequestId: 2e159863-d3c0-46c5-8211-cda72a3b736f
 ```
+
+  - **What are the expected CloudWatch logs when AZ1 is restored?**
+```
+START RequestId: 4303e6dd-a5c0-4614-af73-e3c2b9f07336 Version: $LATEST
+[INFO] 2021-05-06T16:46:18.593Z 4303e6dd-a5c0-4614-af73-e3c2b9f07336 -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
+INFO] 2021-05-06T16:46:18.593Z 4303e6dd-a5c0-4614-af73-e3c2b9f07336 >> Triggered by CloudWatch Scheduled Event <<
+[INFO] 2021-05-06T16:46:18.594Z 4303e6dd-a5c0-4614-af73-e3c2b9f07336 <-- Host+Port 10.0.2.180:541 is UP = True
+[INFO] 2021-05-06T16:46:18.667Z 4303e6dd-a5c0-4614-af73-e3c2b9f07336 <-- Host+Port 10.0.20.236:541 is UP = True
+INFO] 2021-05-06T16:46:18.914Z 4303e6dd-a5c0-4614-af73-e3c2b9f07336 -->> AZ1-FGT is up, AZ2-FGT is up: Checking routes point to correct AZ-FGT
+[INFO] 2021-05-06T16:46:19.061Z 4303e6dd-a5c0-4614-af73-e3c2b9f07336 --> Updated 0.0.0.0/0 in rt rtb-0bae9c4c6426718dc to target eni-0bdb780f0ba3575f3
+[INFO] 2021-05-06T16:46:19.061Z 4303e6dd-a5c0-4614-af73-e3c2b9f07336 -=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=-
+END RequestId: 4303e6dd-a5c0-4614-af73-e3c2b9f07336
+	2021-05-06T12:46:19
+```
+
+  - **How do I update my lambda function from python 2.7 to 3.8?**
+In order to update your lambda function runtime from python 2.7 to 3.8, you need to validate that your lambda function has an existing environment variable called 'VPCEndpointURL'.  Below is an example to reference.
+![Example Diagram](./content/lambda1.png)
+
+If you are missing this environment variable, you need to get your EC2 VPC endpoint DNS name by navigating to your VPC console, endpoints, then find your EC2 endpoint for your VPC where the FGTs are deployed.  Copy the first DNS name, ie 'vpce-0f722ed926c686bd5-1lt2jdh3.ec2.us-east-2.vpce.amazonaws.com', as this will be used as part of the environment variable.
+![Example Diagram](./content/lambda2.png)
+
+Next, naviagte back to your lambda function and create the environment variable 'VPCEndpointURL' and for the value provide your VPC endpoint dns with 'https://' as a prefix.  So in our example your value would be 'https://vpce-0f722ed926c686bd5-1lt2jdh3.ec2.us-east-2.vpce.amazonaws.com'.
+
+Next, on your lambda function edit your runtime settings to use python 3.8.
+![Example Diagram](./content/lambda3.png)
+
+Finally upate your lambda function code for the healthcheck.py to match the latest version located [Here](/healthcheck.py).  Then click 'deploy' to push this to your lambda function.
+
+To confirm the operation of the lambda function, compare your cloudwatch logs to those referenced above for steady state, failover, and restoration events.
