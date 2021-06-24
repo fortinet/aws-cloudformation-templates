@@ -206,6 +206,7 @@
                 "ap-southeast-2",
                 "ca-central-1",
                 "eu-central-1",
+                "eu-north-1",
                 "eu-west-1",
                 "eu-west-2",
                 "eu-west-3",
@@ -246,6 +247,9 @@
             },
             "ca-central-1": {
                 "fgtami": "ami-0e2dfde704479020d"
+            },
+            "eu-north-1": {
+                "fgtami": "ami-0cfc06894012624ab"
             },
             "eu-central-1": {
                 "fgtami": "ami-084fbc093774e3d55"
