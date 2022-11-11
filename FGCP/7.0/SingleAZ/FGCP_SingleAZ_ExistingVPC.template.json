@@ -1178,27 +1178,106 @@
 				"Path": "/",
 				"Policies": [
 					{
-						"PolicyName": "S3AccessRole",
-						"PolicyDocument": {
-							"Version": "2012-10-17",
-							"Statement": [
-								{
-									"Effect": "Allow",
-									"Action": [
-										"s3:PutObject",
-										"ec2:DescribeImages"
-									],
-									"Resource": "*"
-								},
-								{
-									"Effect": "Allow",
-									"Action": [
-										"logs:*"
-									],
-									"Resource": "*"
-								}
+						"Sid": "CreateLogGroups",
+						"Effect": "Allow",
+						"Action": "logs:CreateLogGroup",
+						"Resource": {
+							"Fn::Join": [
+								":",
+								[
+									"arn",
+									{
+										"Ref": "AWS::Partition"
+									},
+									"logs",
+									{
+										"Ref": "AWS::Region"
+									},
+									{
+										"Ref": "AWS::AccountId"
+									},
+									"*"
+								]
 							]
 						}
+					},
+					{
+						"Sid": "WriteLogs",
+						"Effect": "Allow",
+						"Action": [
+							"logs:CreateLogStream",
+							"logs:PutLogEvents"
+						],
+						"Resource": {
+							"Fn::Join": [
+								":",
+								[
+									"arn",
+									{
+										"Ref": "AWS::Partition"
+									},
+									"logs",
+									{
+										"Ref": "AWS::Region"
+									},
+									{
+										"Ref": "AWS::AccountId"
+									},
+									"log-group:/aws/lambda/*"
+								]
+							]
+						}
+					},
+					{
+						"Sid": "WriteConfigs",
+						"Effect": "Allow",
+						"Action": "s3:putObject",
+						"Resource": [
+							{
+								"Fn::Join": [
+									":",
+									[
+										"arn",
+										{
+											"Ref": "AWS::Partition"
+										},
+										"s3::",
+										{
+											"Ref": "InitS3Bucket"
+										}
+									]
+								]
+							},
+							{
+								"Fn::Join": [
+									":",
+									[
+										"arn",
+										{
+											"Ref": "AWS::Partition"
+										},
+										"s3::",
+										{
+											"Fn::Join": [
+												"",
+												[
+													{
+													"Ref": "InitS3Bucket"
+													},
+													"/*"
+												]
+											]
+										}
+									]
+								]
+							}
+						]
+					},
+					{
+						"Sid": "LookupAMIs",
+						"Effect": "Allow",
+						"Action": "ec2:DescribeImages",
+						"Resource": "*"
 					}
 				]
 			}
