@@ -408,7 +408,6 @@
 			}
 		},
 		"FortiGateSecGrpHArule": {
-			"DependsOn": "FortiGateSecGrp",
 			"Type": "AWS::EC2::SecurityGroupIngress",
 			"Properties": {
 				"GroupId": {
@@ -811,8 +810,7 @@
 						}
 					]
 				}
-			},
-			"DependsOn": "ClusterEIP"
+			}
 		},
 		"fgt1eni1": {
 			"Type": "AWS::EC2::NetworkInterface",
@@ -1103,8 +1101,7 @@
 						}
 					]
 				}
-			},
-			"DependsOn": "Fgt1EIP"
+			}
 		},
 		"Fgt2EIPASSOCIATION": {
 			"Type": "AWS::EC2::EIPAssociation",
@@ -1131,8 +1128,7 @@
 						}
 					]
 				}
-			},
-			"DependsOn": "Fgt2EIP"
+			}
 		},
 		"LambdaRole": {
 			"Type": "AWS::IAM::Role",
@@ -1156,23 +1152,110 @@
 				"Path": "/",
 				"Policies": [
 					{
-						"PolicyName": "S3AccessRole",
+						"PolicyName": "ConfigBuilder",
 						"PolicyDocument": {
 							"Version": "2012-10-17",
 							"Statement": [
 								{
+									"Sid": "CreateLogGroups",
 									"Effect": "Allow",
-									"Action": [
-										"s3:PutObject",
-										"ec2:DescribeImages"
-									],
-									"Resource": "*"
+									"Action": "logs:CreateLogGroup",
+									"Resource": {
+										"Fn::Join": [
+											":",
+											[
+												"arn",
+												{
+													"Ref": "AWS::Partition"
+												},
+												"logs",
+												{
+													"Ref": "AWS::Region"
+												},
+												{
+													"Ref": "AWS::AccountId"
+												},
+												"*"
+											]
+										]
+									}
 								},
 								{
+									"Sid": "WriteLogs",
 									"Effect": "Allow",
 									"Action": [
-										"logs:*"
+										"logs:CreateLogStream",
+										"logs:PutLogEvents"
 									],
+									"Resource": {
+										"Fn::Join": [
+											":",
+											[
+												"arn",
+												{
+													"Ref": "AWS::Partition"
+												},
+												"logs",
+												{
+													"Ref": "AWS::Region"
+												},
+												{
+													"Ref": "AWS::AccountId"
+												},
+												"log-group:/aws/lambda/*"
+											]
+										]
+									}
+								},
+								{
+									"Sid": "WriteConfigs",
+									"Effect": "Allow",
+									"Action": "s3:putObject",
+									"Resource": [
+										{
+											"Fn::Join": [
+												":",
+												[
+													"arn",
+													{
+														"Ref": "AWS::Partition"
+													},
+													"s3::",
+													{
+														"Ref": "InitS3Bucket"
+													}
+												]
+											]
+										},
+										{
+											"Fn::Join": [
+												":",
+												[
+													"arn",
+													{
+														"Ref": "AWS::Partition"
+													},
+													"s3::",
+													{
+														"Fn::Join": [
+															"",
+															[
+																{
+																"Ref": "InitS3Bucket"
+																},
+																"/*"
+															]
+														]
+													}
+												]
+											]
+										}
+									]
+								},
+								{
+									"Sid": "LookupAMIs",
+									"Effect": "Allow",
+									"Action": "ec2:DescribeImages",
 									"Resource": "*"
 								}
 							]
@@ -1181,6 +1264,7 @@
 				]
 			}
 		},
+		{
 		"ImageFunction": {
 			"Type": "AWS::Lambda::Function",
 			"Properties": {
