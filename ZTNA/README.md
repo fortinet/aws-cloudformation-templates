@@ -1,6 +1,6 @@
 ## Description
 
-Deploy a single BYOL FortiGae in AWS using CloudFormation with preconfigured ZTNA settings
+Deploy a single BYOL FortiGate in AWS using CloudFormation with preconfigured ZTNA settings
 
 ## Deployment overview
 
@@ -62,7 +62,7 @@ Cloudformation deploys the following components:
 
 ## Destroy the stack
 
-To detroy the stack, choose the stack and click on `Delete`
+To destroy the stack, choose the stack and click on `Delete`
 
 # Support
 
