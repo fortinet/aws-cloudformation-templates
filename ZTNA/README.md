@@ -20,7 +20,7 @@ This deployment requires that you already have the following already configured:
 -   A Lambda function.
 
 ### Topology diagram:
-![ZTAG topolog](ZTAG-Topology.png)
+![ZTAG topology](ZTAG-Topology.png)
 
 
 ## Deployment:
