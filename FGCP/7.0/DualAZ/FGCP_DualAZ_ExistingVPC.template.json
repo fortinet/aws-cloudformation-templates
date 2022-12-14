@@ -1263,7 +1263,6 @@
 					}
 				]
 			}
-		},
 		"ImageFunction": {
 			"Type": "AWS::Lambda::Function",
 			"Properties": {
