@@ -1,0 +1,682 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: (v1.0) AWS Cloudformation to deploy a single FortiGate with ZTNA configuration
+  as ZTNA Gateway
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: VPC Configuration
+        Parameters:
+          - VPCID
+          - VPCCIDR
+          - PublicSubnet
+          - PrivateSubnet
+      - Label:
+          default: ZTNA Gateway Instance Configuration
+        Parameters:
+          - FortiOSVersion
+          - InstanceType
+          - LocalUsername
+          - LocalUserPassword
+          - PublicSubnetRouterIP
+          - PrivateSubnetRouterIP
+          - S3EndpointDeployment
+          - PublicSubnetRouteTableID
+          - InitS3Bucket
+          - LicenseType
+          - ZTNAGatewayLicenseFile
+          - CIDRForInstanceAccess
+          - EncryptVolumes
+          - KeyPair
+      - Label:
+          default: EMS Configurations
+        Parameters:
+          - EMSServerType
+          - EMSServerIP
+          - EMSServerPort
+      - Label:
+          default: Interface IP Configuration for ZTNA Gateway
+        Parameters:
+          - ZTNAGatewayPublicIP
+          - ZTNAGatewayPrivateIP
+      - Label:
+          default: Server Configuration
+        Parameters:
+          - ServerPrivateIP
+          - ServerName
+Parameters:
+  VPCID:
+    Type: 'AWS::EC2::VPC::Id'
+    Description: Select the existing VPC to use
+  VPCCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: Provide a network CIDR for the VPC
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\/([0-9]|[1-2][0-9]|3[0-2]))?$
+    ConstraintDescription: must be a valid CIDR block format.
+  PublicSubnet:
+    Type: 'AWS::EC2::Subnet::Id'
+    Description: Select the existing subnet for PublicSubnet
+  PrivateSubnet:
+    Type: 'AWS::EC2::Subnet::Id'
+    Description: Select the existing subnet for PrivateSubnet
+  PublicSubnetRouterIP:
+    Type: String
+    Default: 10.0.0.1
+    Description: Provide the IP address of the AWS intrinsic router (First IP from
+      PublicSubnet)
+  PrivateSubnetRouterIP:
+    Type: String
+    Default: 10.0.1.1
+    Description: Provide the IP address of the AWS intrinsic router (First IP from
+      PrivateSubnet)
+  ZTNAGatewayPublicIP:
+    Type: String
+    Default: 10.0.0.10/24
+    Description: Provide the IP address in CIDR form for the public interface of ZTNA
+      Gateway (IP from PublicSubnet)
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\/([0-9]|[1-2][0-9]|3[0-2]))?$
+    ConstraintDescription: must be a valid CIDR block format.
+  ZTNAGatewayPrivateIP:
+    Type: String
+    Default: 10.0.1.10/24
+    Description: Provide the IP address in CIDR form for the private interface of ZTNA
+      Gateway (IP from PrivateSubnet)
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\/([0-9]|[1-2][0-9]|3[0-2]))?$
+    ConstraintDescription: must be a valid CIDR block format.
+  LocalUsername:
+    Type: String
+    Default: localuser
+    Description: The name of the localuser used for authentication when accessing ZTNA
+      Application
+    AllowedPattern: '^$|^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+  LocalUserPassword:
+    Type: String
+    NoEcho: 'true'
+    Default: ''
+    Description: The pasword of the localuser used for authentication when accessing ZTNA
+      Application
+  ServerPrivateIP:
+    Type: String
+    Default: 10.0.1.232
+    Description: Provide the IP address in CIDR form for the private interface of
+      Application Server (IP from PrivateSubnet)
+  ServerName:
+    Type: String
+    Default: ZTNAServer
+    Description: Provide the name for the Application Server
+  FortiOSVersion:
+    Type: String
+    Default: 723
+    ConstraintDescription: must be a valid FortiOS version from the selection.
+    Description: FortiOS version supported for AWS.
+    AllowedValues:
+      - 723
+  InstanceType:
+    Type: String
+    Default: c6g.large
+    Description: Select the instance type for the ZTNA Gateway
+    AllowedValues:
+      - c6g.large
+      - c6g.xlarge
+      - c6g.2xlarge
+      - c6g.8xlarge
+      - c6g.12xlarge
+      - c6g.16xlarge
+  CIDRForInstanceAccess:
+    Type: String
+    Description: Please set CIDR to x.x.x.x/32 to allow one specific IP address access
+      0.0.0.0/0 to allow all IP addresses access, or another CIDR range
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\/([0-9]|[1-2][0-9]|3[0-2]))?$
+    ConstraintDescription: must be a valid CIDR block format.
+  KeyPair:
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    Description: Select a keypair to associate with the ZTNA Gateway
+  EncryptVolumes:
+    Type: String
+    Description: Select 'true' to encrypt the ZTNA Gateway instances OS and Log volumes
+      with your account's KMS default master key for EBS.  Otherwise select
+      false to leave unencrypted
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+  S3EndpointDeployment:
+    Type: String
+    Description: Select if a new S3 Endpoint should be deployed or not.  A S3 Endpoint should be
+      used and associated to both PublicSubnets for successful bootstrapping ***
+    AllowedValues:
+      - DeployNew
+      - UseExisting
+  PublicSubnetRouteTableID:
+    Type: String
+    Description: If a new S3 Endpoint is to be deployed, provide the route table ID
+      associated to PublicSubnet
+  InitS3Bucket:
+    Type: String
+    MinLength: '1'
+    Description: Provide the Init S3 Bucket name, where your config files will be created 
+      *** the bucket should exist in the same region as this deployment for
+      successful bootstrapping ***
+  LicenseType:
+    Type: String
+    Description: Select the license type for the ZTNA Gateway
+    AllowedValues:
+      - BYOL
+  ZTNAGatewayLicenseFile:
+    Type: String
+    Description: Provide the name of the BYOL license file in the Init S3 Bucket for ZTNA Gateway (ie fgt.lic or prefix/fgt.lic)
+  EMSServerType:
+    Type: String
+    Default: Cloud
+    Description: Select the EMS Server type for the ZTNA Gateway
+    AllowedValues:
+      - Cloud
+      - OnPremise
+  EMSServerIP:
+    Type: String
+    Description: If OnPremise is choosen, provide the IP address in CIDR form for the EMS Server's Public IP.
+  EMSServerPort:
+    Type: String
+    Default: 443
+    Description: If OnPremise is choosen, provide the Port to connect to the EMS Server Public IP.
+Conditions:
+  CreateS3Endpoint: !Equals [!Ref 'S3EndpointDeployment', DeployNew ]
+  LicenseTypeBYOL: !Equals [!Ref LicenseType, BYOL]
+  EMSServerTypeCloud: !Equals [!Ref EMSServerType, Cloud]
+Mappings:
+  ProductVersionMap:
+    FortiGateByol:
+      '723': FGTVMARMBYOL723
+  AWSAMIRegionMap:
+    us-east-1:
+      FGTVMARMBYOL723: ami-0e336a837d96589e7
+    us-east-2:
+      FGTVMARMBYOL723: ami-00e6b18b3fbe97cc6
+    us-west-1:
+      FGTVMARMBYOL723: ami-08817974a8c6dc6f3
+    us-west-2:
+      FGTVMARMBYOL723: ami-08ef609bfa5a7fa90
+    ca-central-1:
+      FGTVMARMBYOL723: ami-0f923d7726c4f3b16
+    eu-central-1:
+      FGTVMARMBYOL723: ami-0e597d4ccdc90e15c
+    eu-west-1:
+      FGTVMARMBYOL723: ami-0564b1a80052f61b7
+    eu-west-2:
+      FGTVMARMBYOL723: ami-0a8d6bf390391aa22
+    eu-west-3:
+      FGTVMARMBYOL723: ami-0635aa86cf73f0b4d
+    eu-north-1:
+      FGTVMARMBYOL723: ami-08a7d2a30f93e06b7
+    eu-south-1:
+      FGTVMARMBYOL723: ami-0fc8572f730279857
+    ap-east-1:
+      FGTVMARMBYOL723: ami-0d40d2f30c3adfffb
+    ap-northeast-1:
+      FGTVMARMBYOL723: ami-0d8c2ada103a8b6d6
+    ap-northeast-2:
+      FGTVMARMBYOL723: ami-0e0453203ea6c1709
+    ap-northeast-3:
+      FGTVMARMBYOL723: ami-0df115204736c914a
+    ap-southeast-1:
+      FGTVMARMBYOL723: ami-04d4154ed6c45f3c5
+    ap-southeast-2:
+      FGTVMARMBYOL723: ami-050fe5cf6b6c7ce57
+    ap-south-1:
+      FGTVMARMBYOL723: ami-0189ae16c26ce17a8
+    sa-east-1:
+      FGTVMARMBYOL723: ami-00d47aa5f306a6ce6
+    me-south-1:
+      FGTVMARMBYOL723:  ami-0dcc138ac5c5b2bcc
+Resources:
+  S3Endpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Condition: CreateS3Endpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:GetObject'
+            Resource:
+              - '*'
+      RouteTableIds:
+        - !Ref PublicSubnetRouteTableID
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcId: !Ref VPCID
+  InstanceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: FGCPPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                Resource: '*'
+  InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref InstanceRole
+  ZTNAGatewaySecGrp:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VPCID
+      GroupDescription: FortigateSecGrp
+      SecurityGroupIngress:
+        - Description: Allow remote access to FGT
+          IpProtocol: '-1'
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: !Ref CIDRForInstanceAccess
+        - Description: Allow local VPC access to FGT
+          IpProtocol: '-1'
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: !Ref VPCCIDR
+  ZTNAGatewaySecGrpHArule:
+    DependsOn: ZTNAGatewaySecGrp
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref ZTNAGatewaySecGrp
+      Description: Allow FGTs to access each other
+      IpProtocol: '-1'
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref ZTNAGatewaySecGrp
+  Fgt1:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !FindInMap [AWSAMIRegionMap, !Ref 'AWS::Region',  !FindInMap [ProductVersionMap,
+          FortiGateByol, !Ref 'FortiOSVersion']]
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      KeyName: !Ref KeyPair
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeType: gp2
+            VolumeSize: 2
+            DeleteOnTermination: true
+            Encrypted: !Ref EncryptVolumes
+        - DeviceName: /dev/sdb
+          Ebs:
+            VolumeType: gp2
+            VolumeSize: 30
+            DeleteOnTermination: true
+            Encrypted: !Ref EncryptVolumes
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref fgt1eni0
+          DeviceIndex: '0'
+        - NetworkInterfaceId: !Ref fgt1eni1
+          DeviceIndex: '1'
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref 'AWS::StackName', '-ZTNAGateway']]
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              {
+            - '"bucket"'
+            - ' : "'
+            - !Ref InitS3Bucket
+            - '"'
+            - |
+              ,
+            - '"region"'
+            - ' : '
+            - '"'
+            - !Ref 'AWS::Region'
+            - '"'
+            - !If 
+                - LicenseTypeBYOL
+                - 
+                  !Join
+                    - ''
+                    - - |
+                        ,
+                      - '"license" : "'
+                      - !Ref ZTNAGatewayLicenseFile
+                      - '"'
+                - ''
+            - |
+              ,
+            - '"config"'
+            - ' : '
+            - '"'
+            - /fgt.txt"
+            - |+
+
+            - '}'
+  fgt1eni0:
+    Type: 'AWS::EC2::NetworkInterface'
+    Properties:
+      Description: port1
+      GroupSet:
+        - !Ref ZTNAGatewaySecGrp
+      SourceDestCheck: false
+      SubnetId: !Ref PublicSubnet
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref 'AWS::StackName', -fgt1eni0]]
+        - Key: Interface
+          Value: eth0
+      PrivateIpAddresses:
+        - PrivateIpAddress: !Select ['0', !Split [/, !Ref ZTNAGatewayPublicIP]]
+          Primary: true
+  FGTEIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  FGTIPASSOCIATION:
+    Type: 'AWS::EC2::EIPAssociation'
+    Properties:
+      AllocationId: !GetAtt [FGTEIP, AllocationId]
+      NetworkInterfaceId: !Ref fgt1eni0
+      PrivateIpAddress: !Select ['0', !Split [/, !Ref ZTNAGatewayPublicIP]]
+    DependsOn: FGTEIP
+  fgt1eni1:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      Description: port2
+      GroupSet:
+      - !Ref 'ZTNAGatewaySecGrp'
+      SourceDestCheck: false
+      SubnetId: !Ref 'PrivateSubnet'
+      Tags:
+      - Key: Name
+        Value: !Join ['', [!Ref 'AWS::StackName', -fgt1eni1]]
+      PrivateIpAddress: !Select ['0', !Split [/, !Ref 'ZTNAGatewayPrivateIP']]
+  LambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: S3AccessRole
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                Resource: !Sub ['arn:aws:s3:::${Bucketname}/fgt.txt', {Bucketname: !Ref 'InitS3Bucket'}]
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+  InitFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        ZipFile: !Join 
+          - |+
+
+          - - import ast
+            - import boto3
+            - import cfnresponse
+            - import json
+            - import logging
+            - logger = logging.getLogger()
+            - logger.setLevel(logging.INFO)
+            - s3 = boto3.client('s3')
+            - ''
+            - template = '''\
+            - config system global
+            - 'set hostname {Hostname}'
+            - set gui-theme mariner
+            - set admintimeout 60
+            - end
+            - config system admin
+            - edit admin
+            - config gui-dashboard
+            - edit 0
+            - set name "FortiView ZTNA Servers"
+            - set vdom root
+            - set layout-type standalone
+            - set csf disable
+            - config widget
+            - edit 1
+            - set type fortiview
+            - set width 1
+            - set height 1
+            - set csf-device all
+            - set fortiview-type ztnaServer
+            - set fortiview-sort-by bytes
+            - set fortiview-timeframe 5min
+            - set fortiview-visualization table
+            - end
+            - end
+            - end
+            - config system settings
+            - set gui-implicit-policy disable
+            - set gui-dos-policy disable
+            - set gui-dynamic-routing disable
+            - set gui-threat-weight disable
+            - set gui-file-filter disable
+            - set gui-application-control disable
+            - set gui-endpoint-control disable
+            - set gui-vpn disable
+            - set gui-wireless-controller disable
+            - set gui-traffic-shaping disable
+            - set gui-webfilter disable
+            - set gui-dnsfilter disable
+            - set allow-subnet-overlap enable
+            - end
+            - config system interface
+            - edit port1
+            - set alias public
+            - set mode static
+            - 'set ip {Port1IP}'
+            - set allowaccess ping https ssh fgfm
+            - set secondary-IP enable
+            - next
+            - edit port2
+            - set alias private
+            - set mode static
+            - 'set ip {Port2IP}'
+            - set allowaccess ping
+            - set mtu-override enable
+            - set mtu 9001
+            - next
+            - end
+            - config router static
+            - edit 1
+            - set device port1
+            - 'set gateway {PublicSubnetRouterIP}'
+            - next
+            - edit 2
+            - 'set dst {VPCCIDR}'
+            - set device port2
+            - 'set gateway {PrivateSubnetRouterIP}'
+            - next
+            - end
+            - config firewall address
+            - edit webserver1
+            - 'set subnet {ServerPrivateIP} 255.255.255.255'
+            - next
+            - end
+            - config firewall addrgrp
+            - edit Webserver
+            - set member webserver1
+            - next
+            - end
+            - config user local
+            - 'edit {LocalUsername}'
+            - set type password
+            - 'set passwd {LocalUserPassword}'
+            - next
+            - end
+            - config user group
+            - edit ztna_group
+            - 'set member {LocalUsername}'
+            - next
+            - end
+            - config firewall vip
+            - 'edit {ServerName}'
+            - set type access-proxy
+            - 'set extip {Port1PrivateIP}'
+            - set extintf port1
+            - set server-type https
+            - set extport 9443
+            - set ssl-certificate Fortinet_SSL
+            - next
+            - end
+            - config firewall access-proxy
+            - 'edit {ServerName}'
+            - 'set vip {ServerName}'
+            - config api-gateway
+            - edit 1
+            - config realservers
+            - edit 1
+            - 'set ip {ServerPrivateIP}'
+            - next
+            - end
+            - next
+            - end
+            - next
+            - end
+            - config firewall proxy-policy
+            - edit 1
+            - set name ZTNA-Web-Server
+            - set proxy access-proxy
+            - set access-proxy ZTNAServer
+            - set srcintf port1
+            - set srcaddr all
+            - set dstaddr Webserver
+            - set action accept
+            - set schedule always
+            - set logtraffic all
+            - set groups ztna_group
+            - next
+            - end
+            - config authentication scheme
+            - edit ZTNA
+            - set method basic
+            - set user-database local-user-db
+            - next
+            - end
+            - config authentication rule
+            - edit ZTNA
+            - set srcintf port1
+            - set srcaddr all
+            - set ip-based disable
+            - set active-auth-method ZTNA
+            - next
+            - end
+            - ''''''''
+            - template2 = '''
+            - config endpoint-control fctems
+            - edit 1
+            - set name ems-cloud
+            - set status enable
+            - set fortinetone-cloud-authentication enable
+            - next
+            - end\
+            - ''''''''
+            - template3 = '''
+            - config endpoint-control fctems
+            - edit 1
+            - set name {EMSName}
+            - set status enable
+            - set server {EMSServerIP}
+            - set https-port {EMSServerPort}
+            - next
+            - end\
+            - ''''''''
+            - ''
+            - 'def handler(event, context):'
+            - '    logger.info(''<-- event received: {}''.format(json.dumps(event)))'
+            - '    dict1 = ast.literal_eval(event[''ResourceProperties''][''FGT1Info''])'
+            - '    dict2 = ast.literal_eval(event[''ResourceProperties''][''EMSInfo''])'
+            - '    emstype = event[''ResourceProperties''][''EMSType'']'
+            - '    if emstype == "Cloud":'
+            - '        final = template + template2'
+            - '        fgt_conf = final.format(**dict1)'
+            - '    else:'
+            - '        final1 = template.format(**dict1)'
+            - '        final2 = template3.format(**dict2)'
+            - '        fgt_conf = final1 + final2'
+            - '    fgt_result = False'
+            - ''
+            - '    try:'
+            - '        resp = s3.put_object(Body=fgt_conf, Bucket=event[''ResourceProperties''][''S3Bucket''], Key=''fgt.txt'')'
+            - '    except Exception as error:'
+            - '        logger.error(''<--!! Exception: {}''.format(error))'
+            - '        responseData = {''msg'':''error''}'
+            - '        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)'
+            - '    if resp[''ResponseMetadata''][''HTTPStatusCode''] == 200:'
+            - '        fgt_result = True'
+            - '        logger.info(''<-- s3 put_object fgt.txt successful'')'
+            - ''
+            - '    if fgt_result is True:'
+            - '        responseData = {''msg'':''200''}'
+            - '        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)'
+            - '    else:'
+            - '        responseData = {''msg'':''error''}'
+            - '        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)'
+            - ''
+      Role: !GetAtt [LambdaRole, Arn]
+      Timeout: 120
+      Handler: index.handler
+      Runtime: python3.8
+      MemorySize: 128
+  RunInitFunction:
+    Type: Custom::InitFunction
+    Properties:
+      ServiceToken: !GetAtt [InitFunction, Arn]
+      EMSType: !Ref 'EMSServerType'
+      S3Bucket: !Ref 'InitS3Bucket'
+      EMSInfo: !Join ['', ['{''EMSServerIP'':''', !Ref 'EMSServerIP', ''',', '''EMSServerPort'':''', !Ref 'EMSServerPort', ''',', '''EMSName'':''EMSLocal''}']]
+      FGT1Info: !Join ['', ['{''VPCCIDR'':''', !Ref 'VPCCIDR', ''',', '''ServerPrivateIP'':''',
+          !Ref 'ServerPrivateIP', ''',', '''ServerName'':''', !Ref 'ServerName', ''',',
+          '''PublicSubnetRouterIP'':''', !Ref 'PublicSubnetRouterIP', ''',', '''PrivateSubnetRouterIP'':''',
+          !Ref 'PrivateSubnetRouterIP', ''',', '''Port1IP'':''', !Ref 'ZTNAGatewayPublicIP',
+          ''',', '''Port1PrivateIP'':''', !Select ['0', !Split [/, !Ref 'ZTNAGatewayPublicIP']],
+          ''',', '''Port2IP'':''', !Ref 'ZTNAGatewayPrivateIP', ''',', '''LocalUsername'':''',
+          !Ref 'LocalUsername', ''',', '''LocalUserPassword'':''', !Ref 'LocalUserPassword',
+          ''',', '''Region'':''', !Ref 'AWS::Region', ''',', '''Hostname'':''ZTNA-Gateway''}']]
+Outputs:
+  AdminUsername:
+    Value: admin
+    Description: Admin username for the ZTNA Gateway
+  Password:
+    Value: !Ref Fgt1
+    Description: Initial password for the ZTNA Gateway's Admin User.
+  LocalUsername:
+    Value: !Ref LocalUsername
+    Description: Local User account for user authentication when accesing ZTNA Application
+  ZTNAApplicationURL:
+    Value: !Join ['', ['https://', !Ref 'FGTEIP', ':9443/']]
+    Description: ZTNA Application URL
+  ZTNAGatewayLoginURL:
+    Value: !Join ['', ['https://', !Ref 'FGTEIP']]
+    Description: Login URL for the public interface of the ZTNA Gateway
