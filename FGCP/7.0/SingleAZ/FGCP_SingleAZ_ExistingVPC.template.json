@@ -1313,7 +1313,7 @@
 								"    try:",
 								"        resp = client.describe_images(",
 								"            Filters=[{'Name': 'name', 'Values': [event['ResourceProperties']['LicenseType']]}],",
-								"            Owners=['679593333241', '464423754048', '211372476111', '345084742485', '874634375141']",
+								"            Owners=['679593333241', '464423754048', '211372476111', '345084742485', '874634375141', '953345546836']",
 								"        )",
 								"    except Exception as error:",
 								"        logger.error('<--!! Exception: {}'.format(error))",
