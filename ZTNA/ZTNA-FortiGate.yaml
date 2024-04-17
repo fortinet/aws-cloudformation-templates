@@ -107,11 +107,11 @@ Parameters:
     Description: Provide the name for the Application Server
   FortiOSVersion:
     Type: String
-    Default: 723
+    Default: 728
     ConstraintDescription: must be a valid FortiOS version from the selection.
     Description: FortiOS version supported for AWS.
     AllowedValues:
-      - 723
+      - 728
   InstanceType:
     Type: String
     Default: c6g.large
