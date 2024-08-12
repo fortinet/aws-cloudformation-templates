@@ -394,17 +394,24 @@
 						"CidrIp": {
 							"Ref": "CIDRForInstanceAccess"
 						}
-					},
-					{
-						"Description": "Allow local VPC access to FGT",
-						"IpProtocol": "-1",
-						"FromPort": "0",
-						"ToPort": "65535",
-						"CidrIp": {
-							"Ref": "VPCCIDR"
-						}
 					}
 				]
+			}
+		},
+		"InstanceIngress": {
+ 			"DependsOn": "FortiGateSecGrp",
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"Properties": {
+				"GroupId": {
+					"Ref": "FortiGateSecGrp"
+				},
+				"Description": "Allow FGTs to talk amongst themselves",
+			"IpProtocol": "-1",
+			"FromPort": "0",
+			"ToPort": "65535",
+			"CidrIp": {
+				"Ref": "VPCCIDR"
+				}
 			}
 		},
 		"FortiGateSecGrpHArule": {
