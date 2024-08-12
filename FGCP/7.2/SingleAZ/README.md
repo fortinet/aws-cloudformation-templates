@@ -115,8 +115,8 @@ CloudFormation templates are available to simplify the deployment process and ar
 The FGCP templates are organized into different folders based on the FortiOS version.  Once a FortiOS version is selected, templates are available to build a new base VPC if needed and an existing FGT template to deploy the clustered instances.
 
 Here is a list of the FGCP HA templates currently available in this folder:
-  - [BaseVPC_FGCP_DualAZ](./BaseVPC_FGCP_DualAZ.template.json)
-  - [FGCP_DualAZ_ExistingVPC](./FGCP_DualAZ_ExistingVPC.template.json)
+  - [BaseVPC_FGCP_SingleAZ](./BaseVPC_FGCP_SingleAZ.template.json)
+  - [FGCP_SingleAZ_ExistingVPC](./FGCP_SingleAZ_ExistingVPC.template.json)
 
 These templates not only deploy AWS infrastructure but also bootstrap the FortiGate instances with the relevant network and FGCP HA configuration to support the VPC.  Most of this information is gathered as variables in the templates when a stack is deployed.  These variables are organized into these main groups:
 -	VPC Configuration
