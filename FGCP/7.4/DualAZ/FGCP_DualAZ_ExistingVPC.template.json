@@ -1290,7 +1290,7 @@
 								"",
 								"    try:",
 								"        resp = client.describe_images(",
-								"            Filters=[{'Name': 'name', 'Values': [event['ResourceProperties']['LicenseType']]}],",
+								"            Filters=[{'Name': 'name', 'Values': [event['ResourceProperties']['LicenseType']]}, {'Name': 'product-code', 'Values': [event['ResourceProperties']['ProductCode']]}],",
 								"            Owners=['679593333241', '464423754048', '211372476111', '345084742485', '874634375141', '953345546836', '939706979954','786482375130', '569228561889', '679593333241', '769304176199', '852430205519', '082632041095', '279184472064', '971815773857']",
 								"        )",
 								"    except Exception as error:",
@@ -1343,6 +1343,13 @@
 						"LicenseTypeBYOL",
 						"FortiGate-VM64-AWS *(7.4.*)*",
 						"FortiGate-VM64-AWSONDEMAND *(7.4.*)*"
+					]
+				},
+				"ProductCode": {
+					"Fn::If": [
+						"LicenseTypeBYOL",
+						"dlaioq277sglm5mw1y1dmeuqa",
+						"2wqkpek696qhdeo7lbbjncqli"
 					]
 				}
 			}
