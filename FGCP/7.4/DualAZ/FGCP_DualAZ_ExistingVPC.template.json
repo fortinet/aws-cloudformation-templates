@@ -174,28 +174,28 @@
 		"FortiGate2PublicIP": {
 			"Type": "String",
 			"Default": "10.0.10.10/24",
-			"Description": "Provide the IP address in CIDR form for the public interface of FortiGate2 (IP from PublicSubnet1)",
+			"Description": "Provide the IP address in CIDR form for the public interface of FortiGate2 (IP from PublicSubnet2)",
 			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
 			"ConstraintDescription": "must be a valid CIDR block format."
 		},
 		"FortiGate2PrivateIP": {
 			"Type": "String",
 			"Default": "10.0.20.10/24",
-			"Description": "Provide the IP address in CIDR form for the private interface of FortiGate2 (IP from PrivateSubnet1)",
+			"Description": "Provide the IP address in CIDR form for the private interface of FortiGate2 (IP from PrivateSubnet2)",
 			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
 			"ConstraintDescription": "must be a valid CIDR block format."
 		},
 		"FortiGate2HAsyncIP": {
 			"Type": "String",
 			"Default": "10.0.30.10/24",
-			"Description": "Provide the IP address in CIDR form for the ha sync interface of FortiGate2 (IP from HASyncSubnet1)",
+			"Description": "Provide the IP address in CIDR form for the ha sync interface of FortiGate2 (IP from HASyncSubnet2)",
 			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
 			"ConstraintDescription": "must be a valid CIDR block format."
 		},
 		"FortiGate2HAmgmtIP": {
 			"Type": "String",
 			"Default": "10.0.40.10/24",
-			"Description": "Provide the IP address in CIDR form for the ha management interface of FortiGate2 (IP from HAMgmtSubnet1)",
+			"Description": "Provide the IP address in CIDR form for the ha management interface of FortiGate2 (IP from HAMgmtSubnet2)",
 			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
 			"ConstraintDescription": "must be a valid CIDR block format."
 		},
@@ -1290,7 +1290,7 @@
 								"",
 								"    try:",
 								"        resp = client.describe_images(",
-								"            Filters=[{'Name': 'name', 'Values': [event['ResourceProperties']['LicenseType']]}],",
+								"            Filters=[{'Name': 'name', 'Values': [event['ResourceProperties']['LicenseType']]}, {'Name': 'product-code', 'Values': [event['ResourceProperties']['ProductCode']]}],",
 								"            Owners=['679593333241', '464423754048', '211372476111', '345084742485', '874634375141', '953345546836', '939706979954','786482375130', '569228561889', '679593333241', '769304176199', '852430205519', '082632041095', '279184472064', '971815773857']",
 								"        )",
 								"    except Exception as error:",
@@ -1343,6 +1343,13 @@
 						"LicenseTypeBYOL",
 						"FortiGate-VM64-AWS *(7.4.*)*",
 						"FortiGate-VM64-AWSONDEMAND *(7.4.*)*"
+					]
+				},
+				"ProductCode": {
+					"Fn::If": [
+						"LicenseTypeBYOL",
+						"dlaioq277sglm5mw1y1dmeuqa",
+						"2wqkpek696qhdeo7lbbjncqli"
 					]
 				}
 			}
