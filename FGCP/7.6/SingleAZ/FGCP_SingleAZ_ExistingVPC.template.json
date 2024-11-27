@@ -1,0 +1,1741 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "(v4.5) AWS CFT to deploy a FGCP based Active-Passive HA solution with two FortiGates in the same AZ",
+	"Metadata": {
+		"AWS::CloudFormation::Interface": {
+			"ParameterGroups": [
+				{
+					"Label": {
+						"default": "VPC Configuration"
+					},
+					"Parameters": [
+						"VPCID",
+						"VPCCIDR",
+						"PublicSubnet",
+						"PrivateSubnet",
+						"HASyncSubnet",
+						"HAMgmtSubnet"
+					]
+				},
+				{
+					"Label": {
+						"default": "FortiGate Instance Configuration"
+					},
+					"Parameters": [
+						"InstanceType",
+						"CIDRForInstanceAccess",
+						"KeyPair",
+						"EncryptVolumes",
+						"S3EndpointDeployment",
+						"PublicSubnetRouteTableID",
+						"InitS3Bucket",
+						"LicenseType",
+						"FortiGate1LicenseFile",
+						"FortiGate2LicenseFile",
+						"PublicSubnetRouterIP",
+						"PrivateSubnetRouterIP",
+						"HAMgmtSubnetRouterIP"
+					]
+				},
+				{
+					"Label": {
+						"default": "Interface IP Configuration for FortiGate 1"
+					},
+					"Parameters": [
+						"FortiGate1PublicIP",
+						"FortiGate1PrivateIP",
+						"FortiGate1HAsyncIP",
+						"FortiGate1HAmgmtIP"
+					]
+				},
+				{
+					"Label": {
+						"default": "Interface IP Configuration for FortiGate 2"
+					},
+					"Parameters": [
+						"FortiGate2PublicIP",
+						"FortiGate2PrivateIP",
+						"FortiGate2HAsyncIP",
+						"FortiGate2HAmgmtIP"
+					]
+				},
+				{
+					"Label": {
+						"default": "Interface IP Configuration for the Cluster"
+					},
+					"Parameters": [
+						"ClusterPublicIP",
+						"ClusterPrivateIP"
+					]
+				}
+			]
+		}
+	},
+	"Parameters": {
+		"VPCID": {
+			"Type": "AWS::EC2::VPC::Id",
+			"Description": "Select the VPC to use"
+		},
+		"VPCCIDR": {
+			"Type": "String",
+			"Default": "10.0.0.0/16",
+			"Description": "Provide a network CIDR for the VPC",
+			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+			"ConstraintDescription": "must be a valid CIDR block format."
+		},
+		"PublicSubnet": {
+			"Type": "AWS::EC2::Subnet::Id",
+			"Description": "Select the subnet for PublicSubnet"
+		},
+		"PrivateSubnet": {
+			"Type": "AWS::EC2::Subnet::Id",
+			"Description": "Select the subnet for PrivateSubnet"
+		},
+		"HASyncSubnet": {
+			"Type": "AWS::EC2::Subnet::Id",
+			"Description": "Select the subnet for HASyncSubnet"
+		},
+		"HAMgmtSubnet": {
+			"Type": "AWS::EC2::Subnet::Id",
+			"Description": "Select the subnet for HAMgmtSubnet"
+		},
+		"PublicSubnetRouterIP": {
+			"Type": "String",
+			"Default": "10.0.1.1",
+			"Description": "Provide the IP address of the AWS intrinsic router (First IP from PublicSubnet)"
+		},
+		"PrivateSubnetRouterIP": {
+			"Type": "String",
+			"Default": "10.0.2.1",
+			"Description": "Provide the IP address of the AWS intrinsic router (First IP from PrivateSubnet)"
+		},
+		"HAMgmtSubnetRouterIP": {
+			"Type": "String",
+			"Default": "10.0.4.1",
+			"Description": "Provide the IP address of the AWS intrinsic router (First IP from HAMgmtSubnet)"
+		},
+		"FortiGate1PublicIP": {
+			"Type": "String",
+			"Default": "10.0.1.11/24",
+			"Description": "Provide the IP address in CIDR form for the public interface of FortiGate1 (IP from PublicSubnet)",
+			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+			"ConstraintDescription": "must be a valid CIDR block format."
+		},
+		"FortiGate1PrivateIP": {
+			"Type": "String",
+			"Default": "10.0.2.11/24",
+			"Description": "Provide the IP address in CIDR form for the private interface of FortiGate1 (IP from PrivateSubnet)",
+			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+			"ConstraintDescription": "must be a valid CIDR block format."
+		},
+		"FortiGate1HAsyncIP": {
+			"Type": "String",
+			"Default": "10.0.3.11/24",
+			"Description": "Provide the IP address in CIDR form for the ha sync interface of FortiGate1 (IP from HASyncSubnet)",
+			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+			"ConstraintDescription": "must be a valid CIDR block format."
+		},
+		"FortiGate1HAmgmtIP": {
+			"Type": "String",
+			"Default": "10.0.4.11/24",
+			"Description": "Provide the IP address in CIDR form for the ha management interface of FortiGate1 (IP from HAMgmtSubnet)",
+			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+			"ConstraintDescription": "must be a valid CIDR block format."
+		},
+		"FortiGate2PublicIP": {
+			"Type": "String",
+			"Default": "10.0.1.12/24",
+			"Description": "Provide the IP address in CIDR form for the public interface of FortiGate2 (IP from PublicSubnet)",
+			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+			"ConstraintDescription": "must be a valid CIDR block format."
+		},
+		"FortiGate2PrivateIP": {
+			"Type": "String",
+			"Default": "10.0.2.12/24",
+			"Description": "Provide the IP address in CIDR form for the private interface of FortiGate2 (IP from PrivateSubnet)",
+			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+			"ConstraintDescription": "must be a valid CIDR block format."
+		},
+		"FortiGate2HAsyncIP": {
+			"Type": "String",
+			"Default": "10.0.3.12/24",
+			"Description": "Provide the IP address in CIDR form for the ha sync interface of FortiGate2 (IP from HASyncSubnet)",
+			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+			"ConstraintDescription": "must be a valid CIDR block format."
+		},
+		"FortiGate2HAmgmtIP": {
+			"Type": "String",
+			"Default": "10.0.4.12/24",
+			"Description": "Provide the IP address in CIDR form for the ha management interface of FortiGate2 (IP from HAMgmtSubnet)",
+			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+			"ConstraintDescription": "must be a valid CIDR block format."
+		},
+		"ClusterPublicIP": {
+			"Type": "String",
+			"Default": "10.0.1.13/24",
+			"Description": "Provide the IP address in CIDR form for the public interface of the Cluster (IP from PublicSubnet)",
+			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+			"ConstraintDescription": "must be a valid CIDR block format."
+		},
+		"ClusterPrivateIP": {
+			"Type": "String",
+			"Default": "10.0.2.13/24",
+			"Description": "Provide the IP address in CIDR form for the private interface of the Cluster (IP from PrivateSubnet)",
+			"AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]){1}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+			"ConstraintDescription": "must be a valid CIDR block format."
+		},
+		"InstanceType": {
+			"Type": "String",
+			"Default": "c5.xlarge",
+			"Description": "Select the instance type for the FortiGates",
+			"AllowedValues": [
+				"c5.xlarge",
+				"c5.2xlarge",
+				"c5.4xlarge",
+				"c5.9xlarge",
+				"c5.18xlarge",
+				"c5n.xlarge",
+				"c5n.2xlarge",
+				"c5n.4xlarge",
+				"c5n.9xlarge",
+				"c5n.18xlarge"
+			]
+		},
+		"CIDRForInstanceAccess": {
+			"Type": "String",
+			"Default": "0.0.0.0/0",
+			"Description": "Provide a network CIDR from which the FortiGate instances will be accessed"
+		},
+		"KeyPair": {
+			"Type": "AWS::EC2::KeyPair::KeyName",
+			"Description": "Select a keypair to associate with the FortiGates"
+		},
+		"EncryptVolumes": {
+			"Type": "String",
+			"Description": "Select 'true' to encrypt the FortiGate instances OS and Log volumes with your account's KMS default master key for EBS.  Otherwise select false to leave unencrypted",
+			"Default": "false",
+			"AllowedValues": [
+				"true",
+				"false"
+			]
+		},
+		"S3EndpointDeployment": {
+			"Type": "String",
+			"Description": "Select if a new S3 Endpoint should be deployed or not. If you used the BaseVPC template then select UseExisting.  *** A S3 Endpoint should be used and associated to the PublicSubnet for successful bootstrapping ***",
+			"AllowedValues": [
+				"DeployNew",
+				"UseExisting"
+			]
+		},
+		"PublicSubnetRouteTableID": {
+			"Type": "String",
+			"Description": "If a new S3 Endpoint is to be deployed, provide the route table ID associated to PublicSubnet"
+		},
+		"InitS3Bucket": {
+			"Type": "String",
+			"MinLength": "1",
+			"Description": "Provide the Init S3 Bucket name, where your config files will be created  *** the bucket should exist in the same region as this deployment for successful bootstrapping ***"
+		},
+		"LicenseType": {
+			"Type": "String",
+			"Description": "Select the license type for the FortiGates",
+			"AllowedValues": [
+				"PAYG",
+				"BYOL"
+			]
+		},
+		"FortiGate1LicenseFile": {
+			"Type": "String",
+			"Description": "[BYOL Only, leave blank for PAYG] Provide the name of the BYOL license file in the Init S3 Bucket for FortiGate1 (ie fgt1.lic or prefix/fgt1.lic)"
+		},
+		"FortiGate2LicenseFile": {
+			"Type": "String",
+			"Description": "[BYOL Only, leave blank for PAYG] Provide the name of the BYOL license file in the Init S3 Bucket for FortiGate2 (ie fgt2.lic or prefix/fgt2.lic)"
+		}
+	},
+	"Conditions": {
+		"CreateS3Endpoint": {
+			"Fn::Equals": [
+				{
+					"Ref": "S3EndpointDeployment"
+				},
+				"DeployNew"
+			]
+		},
+		"LicenseTypeBYOL": {
+			"Fn::Equals": [
+				{
+					"Ref": "LicenseType"
+				},
+				"BYOL"
+			]
+		}
+	},
+	"Resources": {
+		"S3Endpoint": {
+			"Type": "AWS::EC2::VPCEndpoint",
+			"Condition": "CreateS3Endpoint",
+			"Properties": {
+				"PolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": "*",
+							"Action": [
+								"s3:GetObject"
+							],
+							"Resource": [
+								"*"
+							]
+						}
+					]
+				},
+				"RouteTableIds": [
+					{
+						"Ref": "PublicSubnetRouteTableID"
+					}
+				],
+				"ServiceName": {
+					"Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+				},
+				"VpcId": {
+					"Ref": "VPCID"
+				}
+			}
+		},
+		"InstanceRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": [
+									"ec2.amazonaws.com"
+								]
+							},
+							"Action": [
+								"sts:AssumeRole"
+							]
+						}
+					]
+				},
+				"Path": "/",
+				"Policies": [
+					{
+						"PolicyName": "FGCPPolicy",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"ec2:Describe*",
+										"ec2:AssociateAddress",
+										"ec2:AssignPrivateIpAddresses",
+										"ec2:UnassignPrivateIpAddresses",
+										"ec2:ReplaceRoute",
+										"eks:DescribeCluster",
+										"eks:ListClusters",
+										"inspector:DescribeFindings",
+										"inspector:ListFindings",
+										"s3:GetObject"
+									],
+									"Resource": "*"
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+		"InstanceProfile": {
+			"Type": "AWS::IAM::InstanceProfile",
+			"Properties": {
+				"Path": "/",
+				"Roles": [
+					{
+						"Ref": "InstanceRole"
+					}
+				]
+			}
+		},
+		"FortiGateSecGrp": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VPCID"
+				},
+				"GroupDescription": "FortigateSecGrp",
+				"SecurityGroupIngress": [
+					{
+						"Description": "Allow remote access to FGT",
+						"IpProtocol": "-1",
+						"FromPort": "0",
+						"ToPort": "65535",
+						"CidrIp": {
+							"Ref": "CIDRForInstanceAccess"
+						}
+					},
+					{
+						"Description": "Allow local VPC access to FGT",
+						"IpProtocol": "-1",
+						"FromPort": "0",
+						"ToPort": "65535",
+						"CidrIp": {
+							"Ref": "VPCCIDR"
+						}
+					}
+				]
+			}
+		},
+		"FortiGateSecGrpHArule": {
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"Properties": {
+				"GroupId": {
+					"Ref": "FortiGateSecGrp"
+				},
+				"Description": "Allow FGTs to access each other",
+				"IpProtocol": "-1",
+				"FromPort": "0",
+				"ToPort": "65535",
+				"SourceSecurityGroupId": {
+					"Ref": "FortiGateSecGrp"
+				}
+			}
+		},
+		"Fgt1": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "InstanceType"
+				},
+				"IamInstanceProfile": {
+					"Ref": "InstanceProfile"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"BlockDeviceMappings": [
+					{
+						"DeviceName": "/dev/sda1",
+						"Ebs": {
+							"VolumeType": "gp2",
+							"VolumeSize": "2",
+							"DeleteOnTermination": "true",
+							"Encrypted": {
+								"Ref": "EncryptVolumes"
+							}
+						}
+					},
+					{
+						"DeviceName": "/dev/sdb",
+						"Ebs": {
+							"VolumeType": "gp2",
+							"VolumeSize": "30",
+							"DeleteOnTermination": "true",
+							"Encrypted": {
+								"Ref": "EncryptVolumes"
+							}
+						}
+					}
+				],
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "fgt1eni0"
+						},
+						"DeviceIndex": "0"
+					},
+					{
+						"NetworkInterfaceId": {
+							"Ref": "fgt1eni1"
+						},
+						"DeviceIndex": "1"
+					},
+					{
+						"NetworkInterfaceId": {
+							"Ref": "fgt1eni2"
+						},
+						"DeviceIndex": "2"
+					},
+					{
+						"NetworkInterfaceId": {
+							"Ref": "fgt1eni3"
+						},
+						"DeviceIndex": "3"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-FortiGate1"
+								]
+							]
+						}
+					}
+				],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"",
+							[
+								"{\n",
+								"\"bucket\"",
+								" : \"",
+								{
+									"Ref": "InitS3Bucket"
+								},
+								"\"",
+								",\n",
+								"\"region\"",
+								" : ",
+								"\"",
+								{
+									"Ref": "AWS::Region"
+								},
+								"\"",
+								",\n",
+								"\"license\"",
+								" : ",
+								"\"",
+								"/",
+								{
+									"Ref": "FortiGate1LicenseFile"
+								},
+								"\"",
+								",\n",
+								"\"config\"",
+								" : ",
+								"\"",
+								"/fgt1.txt\"",
+								"\n",
+								"}"
+							]
+						]
+					}
+				}
+			}
+		},
+		"Fgt2": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "InstanceType"
+				},
+				"IamInstanceProfile": {
+					"Ref": "InstanceProfile"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"BlockDeviceMappings": [
+					{
+						"DeviceName": "/dev/sda1",
+						"Ebs": {
+							"VolumeType": "gp2",
+							"VolumeSize": "2",
+							"DeleteOnTermination": "true",
+							"Encrypted": {
+								"Ref": "EncryptVolumes"
+							}
+						}
+					},
+					{
+						"DeviceName": "/dev/sdb",
+						"Ebs": {
+							"VolumeType": "gp2",
+							"VolumeSize": "30",
+							"DeleteOnTermination": "true",
+							"Encrypted": {
+								"Ref": "EncryptVolumes"
+							}
+						}
+					}
+				],
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "fgt2eni0"
+						},
+						"DeviceIndex": "0"
+					},
+					{
+						"NetworkInterfaceId": {
+							"Ref": "fgt2eni1"
+						},
+						"DeviceIndex": "1"
+					},
+					{
+						"NetworkInterfaceId": {
+							"Ref": "fgt2eni2"
+						},
+						"DeviceIndex": "2"
+					},
+					{
+						"NetworkInterfaceId": {
+							"Ref": "fgt2eni3"
+						},
+						"DeviceIndex": "3"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-FortiGate2"
+								]
+							]
+						}
+					}
+				],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"",
+							[
+								"{\n",
+								"'bucket' : '",
+								{
+									"Ref": "InitS3Bucket"
+								},
+								"',\n",
+								"'region' : '",
+								{
+									"Ref": "AWS::Region"
+								},
+								"',\n",
+								"'license' : '/",
+								{
+									"Ref": "FortiGate2LicenseFile"
+								},
+								"',\n",
+								"'config' : '/fgt2.txt'\n",
+								"}"
+							]
+						]
+					}
+				}
+			}
+		},
+		"fgt1eni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port1",
+				"GroupSet": [
+					{
+						"Ref": "FortiGateSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "PublicSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-fgt1eni0"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth0"
+					}
+				],
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Fn::Select": [
+								"0",
+								{
+									"Fn::Split": [
+										"/",
+										{
+											"Ref": "FortiGate1PublicIP"
+										}
+									]
+								}
+							]
+						},
+						"Primary": "true"
+					},
+					{
+						"PrivateIpAddress": {
+							"Fn::Select": [
+								"0",
+								{
+									"Fn::Split": [
+										"/",
+										{
+											"Ref": "ClusterPublicIP"
+										}
+									]
+								}
+							]
+						},
+						"Primary": "false"
+					}
+				]
+			}
+		},
+		"fgt2eni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port1",
+				"GroupSet": [
+					{
+						"Ref": "FortiGateSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "PublicSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-fgt2eni0"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth0"
+					}
+				],
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Fn::Select": [
+								"0",
+								{
+									"Fn::Split": [
+										"/",
+										{
+											"Ref": "FortiGate2PublicIP"
+										}
+									]
+								}
+							]
+						},
+						"Primary": "true"
+					}
+				]
+			}
+		},
+		"ClusterEIP": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"Domain": "vpc"
+			}
+		},
+		"Fgt1EIP": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"Domain": "vpc"
+			}
+		},
+		"Fgt2EIP": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"Domain": "vpc"
+			}
+		},
+		"ClusterIPASSOCIATION": {
+			"Type": "AWS::EC2::EIPAssociation",
+			"Properties": {
+				"AllocationId": {
+					"Fn::GetAtt": [
+						"ClusterEIP",
+						"AllocationId"
+					]
+				},
+				"NetworkInterfaceId": {
+					"Ref": "fgt1eni0"
+				},
+				"PrivateIpAddress": {
+					"Fn::Select": [
+						"0",
+						{
+							"Fn::Split": [
+								"/",
+								{
+									"Ref": "ClusterPublicIP"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
+		"fgt1eni1": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port2",
+				"GroupSet": [
+					{
+						"Ref": "FortiGateSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "PrivateSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-fgt1eni1"
+								]
+							]
+						}
+					}
+				],
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Fn::Select": [
+								"0",
+								{
+									"Fn::Split": [
+										"/",
+										{
+											"Ref": "FortiGate1PrivateIP"
+										}
+									]
+								}
+							]
+						},
+						"Primary": "true"
+					},
+					{
+						"PrivateIpAddress": {
+							"Fn::Select": [
+								"0",
+								{
+									"Fn::Split": [
+										"/",
+										{
+											"Ref": "ClusterPrivateIP"
+										}
+									]
+								}
+							]
+						},
+						"Primary": "false"
+					}
+				]
+			}
+		},
+		"fgt2eni1": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port2",
+				"GroupSet": [
+					{
+						"Ref": "FortiGateSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "PrivateSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-fgt2eni1"
+								]
+							]
+						}
+					}
+				],
+				"PrivateIpAddress": {
+					"Fn::Select": [
+						"0",
+						{
+							"Fn::Split": [
+								"/",
+								{
+									"Ref": "FortiGate2PrivateIP"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
+		"fgt1eni2": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port3",
+				"GroupSet": [
+					{
+						"Ref": "FortiGateSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "HASyncSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-fgt1eni2"
+								]
+							]
+						}
+					}
+				],
+				"PrivateIpAddress": {
+					"Fn::Select": [
+						"0",
+						{
+							"Fn::Split": [
+								"/",
+								{
+									"Ref": "FortiGate1HAsyncIP"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
+		"fgt1eni3": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port4",
+				"GroupSet": [
+					{
+						"Ref": "FortiGateSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "HAMgmtSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-fgt1eni3"
+								]
+							]
+						}
+					}
+				],
+				"PrivateIpAddress": {
+					"Fn::Select": [
+						"0",
+						{
+							"Fn::Split": [
+								"/",
+								{
+									"Ref": "FortiGate1HAmgmtIP"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
+		"fgt2eni2": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port3",
+				"GroupSet": [
+					{
+						"Ref": "FortiGateSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "HASyncSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-fgt2eni2"
+								]
+							]
+						}
+					}
+				],
+				"PrivateIpAddress": {
+					"Fn::Select": [
+						"0",
+						{
+							"Fn::Split": [
+								"/",
+								{
+									"Ref": "FortiGate2HAsyncIP"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
+		"fgt2eni3": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port4",
+				"GroupSet": [
+					{
+						"Ref": "FortiGateSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "HAMgmtSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-fgt2eni3"
+								]
+							]
+						}
+					}
+				],
+				"PrivateIpAddress": {
+					"Fn::Select": [
+						"0",
+						{
+							"Fn::Split": [
+								"/",
+								{
+									"Ref": "FortiGate2HAmgmtIP"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
+		"Fgt1EIPASSOCIATION": {
+			"Type": "AWS::EC2::EIPAssociation",
+			"Properties": {
+				"AllocationId": {
+					"Fn::GetAtt": [
+						"Fgt1EIP",
+						"AllocationId"
+					]
+				},
+				"NetworkInterfaceId": {
+					"Ref": "fgt1eni3"
+				},
+				"PrivateIpAddress": {
+					"Fn::Select": [
+						"0",
+						{
+							"Fn::Split": [
+								"/",
+								{
+									"Ref": "FortiGate1HAmgmtIP"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
+		"Fgt2EIPASSOCIATION": {
+			"Type": "AWS::EC2::EIPAssociation",
+			"Properties": {
+				"AllocationId": {
+					"Fn::GetAtt": [
+						"Fgt2EIP",
+						"AllocationId"
+					]
+				},
+				"NetworkInterfaceId": {
+					"Ref": "fgt2eni3"
+				},
+				"PrivateIpAddress": {
+					"Fn::Select": [
+						"0",
+						{
+							"Fn::Split": [
+								"/",
+								{
+									"Ref": "FortiGate2HAmgmtIP"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
+		"LambdaRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": [
+									"lambda.amazonaws.com"
+								]
+							},
+							"Action": [
+								"sts:AssumeRole"
+							]
+						}
+					]
+				},
+				"Path": "/",
+				"Policies": [
+					{
+						"PolicyName": "ConfigBuilder",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Sid": "CreateLogGroups",
+									"Effect": "Allow",
+									"Action": "logs:CreateLogGroup",
+									"Resource": {
+										"Fn::Join": [
+											":",
+											[
+												"arn",
+												{
+													"Ref": "AWS::Partition"
+												},
+												"logs",
+												{
+													"Ref": "AWS::Region"
+												},
+												{
+													"Ref": "AWS::AccountId"
+												},
+												"*"
+											]
+										]
+									}
+								},
+								{
+									"Sid": "WriteLogs",
+									"Effect": "Allow",
+									"Action": [
+										"logs:CreateLogStream",
+										"logs:PutLogEvents"
+									],
+									"Resource": {
+										"Fn::Join": [
+											":",
+											[
+												"arn",
+												{
+													"Ref": "AWS::Partition"
+												},
+												"logs",
+												{
+													"Ref": "AWS::Region"
+												},
+												{
+													"Ref": "AWS::AccountId"
+												},
+												"log-group:/aws/lambda/*"
+											]
+										]
+									}
+								},
+								{
+									"Sid": "WriteConfigs",
+									"Effect": "Allow",
+									"Action": "s3:putObject",
+									"Resource": [
+										{
+											"Fn::Join": [
+												":",
+												[
+													"arn",
+													{
+														"Ref": "AWS::Partition"
+													},
+													"s3::",
+													{
+														"Ref": "InitS3Bucket"
+													}
+												]
+											]
+										},
+										{
+											"Fn::Join": [
+												":",
+												[
+													"arn",
+													{
+														"Ref": "AWS::Partition"
+													},
+													"s3::",
+													{
+														"Fn::Join": [
+															"",
+															[
+																{
+																"Ref": "InitS3Bucket"
+																},
+																"/*"
+															]
+														]
+													}
+												]
+											]
+										}
+									]
+								},
+								{
+									"Sid": "LookupAMIs",
+									"Effect": "Allow",
+									"Action": "ec2:DescribeImages",
+									"Resource": "*"
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+		"ImageFunction": {
+			"Type": "AWS::Lambda::Function",
+			"Properties": {
+				"Code": {
+					"ZipFile": {
+						"Fn::Join": [
+							"\n",
+							[
+								"import boto3",
+								"import cfnresponse",
+								"import logging",
+								"import json",
+								"logger = logging.getLogger()",
+								"logger.setLevel(logging.INFO)",
+								"client = boto3.client('ec2')",
+								"",
+								"def handler(event, context):",
+								"    if event['RequestType'] == 'Create':",
+								"        logger.info('<-- event received: {}'.format(json.dumps(event)))",
+								"    else:",
+								"        responseData = {'msg':'200'}",
+								"        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
+								"        return None",
+								"",
+								"    try:",
+								"        resp = client.describe_images(",
+								"            Filters=[{'Name': 'name', 'Values': [event['ResourceProperties']['LicenseType']]}, {'Name': 'product-code', 'Values': [event['ResourceProperties']['ProductCode']]}],",
+								"            Owners=['679593333241', '464423754048', '211372476111', '345084742485', '874634375141', '953345546836', '939706979954','786482375130', '569228561889', '679593333241', '769304176199', '852430205519', '082632041095', '279184472064', '971815773857']",
+								"        )",
+								"    except Exception as error:",
+								"        logger.error('<--!! Exception: {}'.format(error))",
+								"        responseData = {'msg':'error'}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								"",
+								"    if resp['ResponseMetadata']['HTTPStatusCode'] == 200 and resp['Images'] != []:",
+								"        ami_dict = {}",
+								"        ami_list = []",
+								"        for entry in resp['Images']:",
+								"            key = entry['CreationDate']",
+								"            ami_dict[key] = entry['ImageId']",
+								"        ami_list = sorted(ami_dict, reverse = True)",
+								"        logger.info('--> found latest AMI: {}, {}'.format(ami_dict[ami_list[0]], ami_list[0]))",
+								"        responseData = {'ami': ami_dict[ami_list[0]]}",
+								"        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
+								"    else:",
+								"        logger.error('!!--> Unable to find AMI in response! {}'.format(resp))",
+								"        responseData = {'msg':'error'}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								""
+							]
+						]
+					}
+				},
+				"Role": {
+					"Fn::GetAtt": [
+						"LambdaRole",
+						"Arn"
+					]
+				},
+				"Timeout": 120,
+				"Handler": "index.handler",
+				"Runtime": "python3.8",
+				"MemorySize": 128
+			}
+		},
+		"RunImageFunction": {
+			"Type": "Custom::ImageFunction",
+			"Properties": {
+				"ServiceToken": {
+					"Fn::GetAtt": [
+						"ImageFunction",
+						"Arn"
+					]
+				},
+				"LicenseType": {
+					"Fn::If": [
+						"LicenseTypeBYOL",
+						"FortiGate-VM64-AWS *(7.6.*)*",
+						"FortiGate-VM64-AWSONDEMAND *(7.6.*)*"
+					]
+				},
+				"ProductCode": {
+                                        "Fn::If": [
+                                                "LicenseTypeBYOL",
+                                                "dlaioq277sglm5mw1y1dmeuqa",
+                                                "2wqkpek696qhdeo7lbbjncqli"
+                                        ]
+                                }
+			}
+		},
+		"InitFunction": {
+			"Type": "AWS::Lambda::Function",
+			"Properties": {
+				"Code": {
+					"ZipFile": {
+						"Fn::Join": [
+							"\n",
+							[
+								"import ast",
+								"import boto3",
+								"import cfnresponse",
+								"import json",
+								"import logging",
+								"logger = logging.getLogger()",
+								"logger.setLevel(logging.INFO)",
+								"s3 = boto3.client('s3')",
+								"",
+								"template = '''\\",
+								"config system global",
+								"set hostname {Hostname}",
+								"set admintimeout 60",
+								"end",
+								"config system settings",
+								"set allow-subnet-overlap enable",
+								"end",
+								"config system interface",
+								"edit port1",
+								"set alias public",
+								"set mode static",
+								"set ip {Port1IP}",
+								"set allowaccess ping https ssh fgfm",
+								"set secondary-IP enable",
+								"next",
+								"edit port2",
+								"set alias private",
+								"set mode static",
+								"set ip {Port2IP}",
+								"set allowaccess ping",
+								"set mtu-override enable",
+								"set mtu 9001",
+								"next",
+								"edit port3",
+								"set alias hasync",
+								"set mode static",
+								"set ip {Port3IP}",
+								"set allowaccess ping",
+								"set mtu-override enable",
+								"set mtu 9001",
+								"next",
+								"edit port4",
+								"set alias hamgmt",
+								"set mode static",
+								"set ip {Port4IP}",
+								"set allowaccess ping https ssh",
+								"set mtu-override enable",
+								"set mtu 9001",
+								"next",
+								"end",
+								"config router static",
+								"edit 1",
+								"set device port1",
+								"set gateway {PublicSubnetRouterIP}",
+								"next",
+								"edit 2",
+								"set dst {VPCCIDR}",
+								"set device port2",
+								"set gateway {PrivateSubnetRouterIP}",
+								"next",
+								"end",
+								"config firewall policy",
+								"edit 1",
+								"set name outbound-all",
+								"set srcintf port2",
+								"set dstintf port1",
+								"set srcaddr all",
+								"set dstaddr all",
+								"set action accept",
+								"set schedule always",
+								"set service ALL",
+								"set logtraffic all",
+								"set nat enable",
+								"next",
+								"end",
+								"config system sdn-connector",
+								"edit aws-instance-role",
+								"set status enable",
+								"set type aws",
+								"set use-metadata-iam enable",
+								"next",
+								"end",
+								"config system ha",
+								"set group-name group1",
+								"set mode a-p",
+								"set hbdev port3 50",
+								"set session-pickup enable",
+								"set ha-mgmt-status enable",
+								"config ha-mgmt-interface",
+								"edit 1",
+								"set interface port4",
+								"set gateway {HAmgmtSubnetRouterIP}",
+								"next",
+								"end",
+								"set override disable",
+								"set priority {HApriority}",
+								"set unicast-hb enable",
+								"set unicast-hb-peerip {HApeer}",
+								"end\\",
+								"'''",
+								"",
+								"def handler(event, context):",
+								"    dict1 = ast.literal_eval(event['ResourceProperties']['FGT1Info'])",
+								"    dict2 = ast.literal_eval(event['ResourceProperties']['FGT2Info'])",
+								"    fgt1_conf = template.format(**dict1)",
+								"    fgt2_conf = template.format(**dict2)",
+								"    fgt1_result = False",
+								"    fgt2_result = False",
+								"    logger.info('<-- event received: {}'.format(json.dumps(event)))",
+								"",
+								"    try:",
+								"        resp = s3.put_object(Body=fgt1_conf, Bucket=event['ResourceProperties']['S3Bucket'], Key='fgt1.txt')",
+								"    except Exception as error:",
+								"        logger.error('<--!! Exception: {}'.format(error))",
+								"        responseData = {'msg':'error'}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								"    if resp['ResponseMetadata']['HTTPStatusCode'] == 200:",
+								"        fgt1_result = True",
+								"        logger.info('<-- s3 put_object fgt1.txt successful')",
+								"",
+								"    try:",
+								"        resp = s3.put_object(Body=fgt2_conf, Bucket=event['ResourceProperties']['S3Bucket'], Key='fgt2.txt')",
+								"    except Exception as error:",
+								"        logger.error('<--!! Exception: {}'.format(error))",
+								"        responseData = {'msg':'error'}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								"    if resp['ResponseMetadata']['HTTPStatusCode'] == 200:",
+								"        fgt2_result = True",
+								"        logger.info('<-- s3 put_object fgt2.txt successful')",
+								"",
+								"    if fgt1_result is True and fgt2_result is True:",
+								"        responseData = {'msg':'200'}",
+								"        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
+								"    else:",
+								"        responseData = {'msg':'error'}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								""
+							]
+						]
+					}
+				},
+				"Role": {
+					"Fn::GetAtt": [
+						"LambdaRole",
+						"Arn"
+					]
+				},
+				"Timeout": 120,
+				"Handler": "index.handler",
+				"Runtime": "python3.8",
+				"MemorySize": 128
+			}
+		},
+		"RunInitFunction": {
+			"Type": "Custom::InitFunction",
+			"Properties": {
+				"ServiceToken": {
+					"Fn::GetAtt": [
+						"InitFunction",
+						"Arn"
+					]
+				},
+				"S3Bucket": {
+					"Ref": "InitS3Bucket"
+				},
+				"FGT1Info": {
+					"Fn::Join": [
+						"",
+						[
+							"{",
+							"'VPCCIDR':'",
+							{
+								"Ref": "VPCCIDR"
+							},
+							"',",
+							"'HAmgmtSubnetRouterIP':'",
+							{
+								"Ref": "HAMgmtSubnetRouterIP"
+							},
+							"',",
+							"'PublicSubnetRouterIP':'",
+							{
+								"Ref": "PublicSubnetRouterIP"
+							},
+							"',",
+							"'PrivateSubnetRouterIP':'",
+							{
+								"Ref": "PrivateSubnetRouterIP"
+							},
+							"',",
+							"'Port1IP':'",
+							{
+								"Ref": "ClusterPublicIP"
+							},
+							"',",
+							"'Port2IP':'",
+							{
+								"Ref": "ClusterPrivateIP"
+							},
+							"',",
+							"'Port3IP':'",
+							{
+								"Ref": "FortiGate1HAsyncIP"
+							},
+							"',",
+							"'Port4IP':'",
+							{
+								"Ref": "FortiGate1HAmgmtIP"
+							},
+							"',",
+							"'HApeer':'",
+							{
+								"Fn::Select": [
+									"0",
+									{
+										"Fn::Split": [
+											"/",
+											{
+												"Ref": "FortiGate2HAsyncIP"
+											}
+										]
+									}
+								]
+							},
+							"',",
+							"'HApriority':'255',",
+							"'Hostname':'Fgt1'",
+							"}"
+						]
+					]
+				},
+				"FGT2Info": {
+					"Fn::Join": [
+						"",
+						[
+							"{",
+							"'VPCCIDR':'",
+							{
+								"Ref": "VPCCIDR"
+							},
+							"',",
+							"'HAmgmtSubnetRouterIP':'",
+							{
+								"Ref": "HAMgmtSubnetRouterIP"
+							},
+							"',",
+							"'PublicSubnetRouterIP':'",
+							{
+								"Ref": "PublicSubnetRouterIP"
+							},
+							"',",
+							"'PrivateSubnetRouterIP':'",
+							{
+								"Ref": "PrivateSubnetRouterIP"
+							},
+							"',",
+							"'Port1IP':'",
+							{
+								"Ref": "FortiGate2PublicIP"
+							},
+							"',",
+							"'Port2IP':'",
+							{
+								"Ref": "FortiGate2PrivateIP"
+							},
+							"',",
+							"'Port3IP':'",
+							{
+								"Ref": "FortiGate2HAsyncIP"
+							},
+							"',",
+							"'Port4IP':'",
+							{
+								"Ref": "FortiGate2HAmgmtIP"
+							},
+							"',",
+							"'HApeer':'",
+							{
+								"Fn::Select": [
+									"0",
+									{
+										"Fn::Split": [
+											"/",
+											{
+												"Ref": "FortiGate1HAsyncIP"
+											}
+										]
+									}
+								]
+							},
+							"',",
+							"'HApriority':'1',",
+							"'Hostname':'Fgt2'",
+							"}"
+						]
+					]
+				}
+			}
+		}
+	},
+	"Outputs": {
+		"Username": {
+			"Value": "admin",
+			"Description": "Username for the Fortigates"
+		},
+		"Password": {
+			"Value": {
+				"Ref": "Fgt1"
+			},
+			"Description": "Initial password for the FortiGates"
+		},
+		"ClusterLoginURL": {
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"https://",
+						{
+							"Ref": "ClusterEIP"
+						}
+					]
+				]
+			},
+			"Description": "Login URL for the public interface of the active FortiGate"
+		},
+		"FortiGate1LoginURL": {
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"https://",
+						{
+							"Ref": "Fgt1EIP"
+						}
+					]
+				]
+			},
+			"Description": "Login URL for the HAmgmt interface of FortiGate 1"
+		},
+		"FortiGate2LoginURL": {
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"https://",
+						{
+							"Ref": "Fgt2EIP"
+						}
+					]
+				]
+			},
+			"Description": "Login URL for the HAmgmt interface of FortiGate 2"
+		}
+	}
+}
