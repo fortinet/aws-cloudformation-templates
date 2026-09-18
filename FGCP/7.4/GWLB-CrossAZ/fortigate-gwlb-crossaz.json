@@ -1,0 +1,2228 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Two FortiGate-VMs (BYOL/PAYG) across two AZs with AWS Gateway Load Balancer integration, plus a customer VPC with per-AZ GWLB endpoints.",
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Placement"
+                    },
+                    "Parameters": [
+                        "AZ1",
+                        "AZ2"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Security VPC (FortiGate)"
+                    },
+                    "Parameters": [
+                        "VpcCidr",
+                        "PublicCidrAz1",
+                        "PrivateCidrAz1",
+                        "PublicCidrAz2",
+                        "PrivateCidrAz2"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Customer VPC"
+                    },
+                    "Parameters": [
+                        "CsVpcCidr",
+                        "CsPublicCidrAz1",
+                        "CsPrivateCidrAz1",
+                        "CsPublicCidrAz2",
+                        "CsPrivateCidrAz2"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "FortiGate instances"
+                    },
+                    "Parameters": [
+                        "Arch",
+                        "InstanceType",
+                        "LicenseType",
+                        "KeyName",
+                        "AdminSPort",
+                        "FortiGateAmiOverride"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Licensing"
+                    },
+                    "Parameters": [
+                        "LicenseFormat",
+                        "UseS3Bootstrap",
+                        "LicenseContent1",
+                        "LicenseContent2",
+                        "LicenseSourceBucket",
+                        "LicenseKey1",
+                        "LicenseKey2"
+                    ]
+                }
+            ]
+        }
+    },
+    "Parameters": {
+        "AZ1": {
+            "Type": "AWS::EC2::AvailabilityZone::Name",
+            "Description": "Availability zone for the first FortiGate."
+        },
+        "AZ2": {
+            "Type": "AWS::EC2::AvailabilityZone::Name",
+            "Description": "Availability zone for the second FortiGate."
+        },
+        "VpcCidr": {
+            "Type": "String",
+            "Default": "10.1.0.0/16",
+            "AllowedPattern": "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$",
+            "Description": "CIDR for the Security (FortiGate) VPC."
+        },
+        "PublicCidrAz1": {
+            "Type": "String",
+            "Default": "10.1.0.0/24",
+            "AllowedPattern": "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$",
+            "Description": "Public subnet AZ1, FortiGate port1."
+        },
+        "PrivateCidrAz1": {
+            "Type": "String",
+            "Default": "10.1.1.0/24",
+            "AllowedPattern": "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$",
+            "Description": "Private subnet AZ1, FortiGate port2 and the GWLB."
+        },
+        "PublicCidrAz2": {
+            "Type": "String",
+            "Default": "10.1.2.0/24",
+            "AllowedPattern": "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$",
+            "Description": "Public subnet AZ2, FortiGate port1."
+        },
+        "PrivateCidrAz2": {
+            "Type": "String",
+            "Default": "10.1.3.0/24",
+            "AllowedPattern": "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$",
+            "Description": "Private subnet AZ2, FortiGate port2 and the GWLB."
+        },
+        "CsVpcCidr": {
+            "Type": "String",
+            "Default": "20.1.0.0/16",
+            "AllowedPattern": "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$",
+            "Description": "CIDR for the Customer VPC."
+        },
+        "CsPublicCidrAz1": {
+            "Type": "String",
+            "Default": "20.1.0.0/24",
+            "AllowedPattern": "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$",
+            "Description": "Customer public subnet AZ1, holds the AZ1 GWLB endpoint."
+        },
+        "CsPrivateCidrAz1": {
+            "Type": "String",
+            "Default": "20.1.1.0/24",
+            "AllowedPattern": "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$",
+            "Description": "Customer workload subnet AZ1."
+        },
+        "CsPublicCidrAz2": {
+            "Type": "String",
+            "Default": "20.1.2.0/24",
+            "AllowedPattern": "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$",
+            "Description": "Customer public subnet AZ2, holds the AZ2 GWLB endpoint."
+        },
+        "CsPrivateCidrAz2": {
+            "Type": "String",
+            "Default": "20.1.3.0/24",
+            "AllowedPattern": "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$",
+            "Description": "Customer workload subnet AZ2."
+        },
+        "Arch": {
+            "Type": "String",
+            "Default": "arm",
+            "AllowedValues": [
+                "arm",
+                "x86"
+            ],
+            "Description": "FortiGate-VM architecture. Must match InstanceType."
+        },
+        "InstanceType": {
+            "Type": "String",
+            "Default": "c6g.xlarge",
+            "Description": "Must match Arch; c6g.xlarge is arm, c5.xlarge is x86."
+        },
+        "LicenseType": {
+            "Type": "String",
+            "Default": "payg",
+            "AllowedValues": [
+                "payg",
+                "byol"
+            ],
+            "Description": "FortiGate-VM licence model; selects the AMI."
+        },
+        "KeyName": {
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Description": "Existing EC2 key pair for SSH access to the FortiGates."
+        },
+        "AdminSPort": {
+            "Type": "Number",
+            "Default": 443,
+            "MinValue": 1,
+            "MaxValue": 65535,
+            "Description": "FortiGate admin HTTPS port."
+        },
+        "FortiGateAmiOverride": {
+            "Type": "String",
+            "Default": "",
+            "AllowedPattern": "^$|^ami-[0-9a-f]{8,17}$",
+            "Description": "Optional. Overrides the pinned FortiOS 7.6.7 AMI table, for a region it does not cover or a different build."
+        },
+        "LicenseFormat": {
+            "Type": "String",
+            "Default": "file",
+            "AllowedValues": [
+                "file"
+            ],
+            "Description": "BYOL delivery: a .lic file. Ignored for payg."
+        },
+        "UseS3Bootstrap": {
+            "Type": "String",
+            "Default": "true",
+            "AllowedValues": [
+                "true",
+                "false"
+            ],
+            "Description": "Stage the config and licence in an S3 bucket this stack creates instead of inline user-data. Required for licences over the 4096-byte parameter limit."
+        },
+        "LicenseSourceBucket": {
+            "Type": "String",
+            "Default": "",
+            "Description": "S3 mode with LicenseFormat 'file': existing bucket holding the two .lic files, copied into the bucket this stack creates. CloudFormation cannot upload local files, so they must already be in S3."
+        },
+        "LicenseKey1": {
+            "Type": "String",
+            "Default": "license1.lic",
+            "Description": "(BYOL) Licence key in LicenseSourceBucket, for FortiGate 1.  Need to set true for UseS3Bootstrap"
+        },
+        "LicenseKey2": {
+            "Type": "String",
+            "Default": "license2.lic",
+            "Description": "(BYOL) Licence key in LicenseSourceBucket, for FortiGate 2.  Need to set true for UseS3Bootstrap"
+        }
+    },
+    "Conditions": {
+        "UseS3": {
+            "Fn::Equals": [
+                {
+                    "Ref": "UseS3Bootstrap"
+                },
+                "true"
+            ]
+        },
+        "IsByol": {
+            "Fn::Equals": [
+                {
+                    "Ref": "LicenseType"
+                },
+                "byol"
+            ]
+        },
+        "HasAmiOverride": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "FortiGateAmiOverride"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "InlineLicense": {
+            "Fn::And": [
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "UseS3Bootstrap"
+                                },
+                                "true"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "LicenseType"
+                        },
+                        "byol"
+                    ]
+                }
+            ]
+        },
+        "CopyLicenseFiles": {
+            "Fn::And": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "UseS3Bootstrap"
+                        },
+                        "true"
+                    ]
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "LicenseType"
+                        },
+                        "byol"
+                    ]
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "LicenseFormat"
+                        },
+                        "file"
+                    ]
+                }
+            ]
+        }
+    },
+    "Mappings": {
+        "ArchLicenseKey": {
+            "arm": {
+                "byol": "armbyol",
+                "payg": "armpayg"
+            },
+            "x86": {
+                "byol": "x86byol",
+                "payg": "x86payg"
+            }
+        },
+        "FortiGateAmi": {
+            "af-south-1": {
+                "armbyol": "ami-061c6cea1dbc91bbf",
+                "armpayg": "ami-0daef082211d5b77e",
+                "x86byol": "ami-0ee9b44e4ec1bfdc0",
+                "x86payg": "ami-0e62f0da2b37d6214"
+            },
+            "ap-east-1": {
+                "armbyol": "ami-052b547469cf5c5b9",
+                "armpayg": "ami-0087ab7b3e70c0157",
+                "x86byol": "ami-002abb0c1a5e36534",
+                "x86payg": "ami-058cf596fa0421269"
+            },
+            "ap-east-2": {
+                "armbyol": "ami-01072181889dc2142",
+                "armpayg": "ami-0cf88368f7a046af3",
+                "x86byol": "ami-02def78b29c1493dc",
+                "x86payg": "ami-0bf8dd3e192b9d296"
+            },
+            "ap-northeast-1": {
+                "armbyol": "ami-054af3435c841ffcb",
+                "armpayg": "ami-041bc33603ca0f22c",
+                "x86byol": "ami-0bfe018b23b03115f",
+                "x86payg": "ami-0054ec448fc525d05"
+            },
+            "ap-northeast-2": {
+                "armbyol": "ami-0d0dbd071a5cc4f1b",
+                "armpayg": "ami-0a0195f64d690b8db",
+                "x86byol": "ami-0df95c014402984ee",
+                "x86payg": "ami-027ec0eab5c9ff26c"
+            },
+            "ap-northeast-3": {
+                "armbyol": "ami-034bbedf6f41b3500",
+                "armpayg": "ami-0f72ddcb3a6bbbdc2",
+                "x86byol": "ami-004ebcb6de62846e9",
+                "x86payg": "ami-06455b6ca5ae5c2ba"
+            },
+            "ap-south-1": {
+                "armbyol": "ami-000e3622708f7662b",
+                "armpayg": "ami-0206f61ed00bb9f61",
+                "x86byol": "ami-01fd6f2e969e9bf87",
+                "x86payg": "ami-00707fcd3e727532f"
+            },
+            "ap-south-2": {
+                "armbyol": "ami-090c6d675f5e73e58",
+                "armpayg": "ami-0e1c169015b39cfa7",
+                "x86byol": "ami-098062df796dd3fdd",
+                "x86payg": "ami-0e04c84b173481716"
+            },
+            "ap-southeast-1": {
+                "armbyol": "ami-0f8beab3e14825928",
+                "armpayg": "ami-01a0364907cb53faf",
+                "x86byol": "ami-06081b4788006017f",
+                "x86payg": "ami-07a0b006b250b393b"
+            },
+            "ap-southeast-2": {
+                "armbyol": "ami-0ed3647d8430f38eb",
+                "armpayg": "ami-0bad28b6ebd7627eb",
+                "x86byol": "ami-0451629a1bd0d971e",
+                "x86payg": "ami-0a8fb9d197ee75929"
+            },
+            "ap-southeast-3": {
+                "armbyol": "ami-014b65e14128df96b",
+                "armpayg": "ami-0676f839ccff3b251",
+                "x86byol": "ami-0fab4fbd350e69b00",
+                "x86payg": "ami-060ecf635a17382e3"
+            },
+            "ap-southeast-4": {
+                "armbyol": "ami-00d949c94e0ca8991",
+                "armpayg": "ami-08c57c79b843b236e",
+                "x86byol": "ami-041d58c8593d02a7c",
+                "x86payg": "ami-0a6803404a3e9d59e"
+            },
+            "ap-southeast-5": {
+                "armbyol": "ami-0f592e6ba8dbbd3d2",
+                "armpayg": "ami-0824cfd5bf5213b0e",
+                "x86byol": "ami-0d66ada48bb5f6b3a",
+                "x86payg": "ami-0699572b746c5e57b"
+            },
+            "ap-southeast-6": {
+                "armbyol": "ami-0fa74a08e4f5a4921",
+                "armpayg": "ami-042b82b55d6939c9e",
+                "x86byol": "ami-0ffab948d945fa9fe",
+                "x86payg": "ami-0db54aa0aaa735c20"
+            },
+            "ap-southeast-7": {
+                "armbyol": "ami-0aec254d994c6134b",
+                "armpayg": "ami-09e4907c5a418246b",
+                "x86byol": "ami-0f950be3f245faf2d",
+                "x86payg": "ami-0e8022dde5b283cbf"
+            },
+            "ca-central-1": {
+                "armbyol": "ami-073846093cb7ef246",
+                "armpayg": "ami-0b024ebe98510bd39",
+                "x86byol": "ami-0e0b2ef56e1003e6b",
+                "x86payg": "ami-0fb6bf31908199e50"
+            },
+            "ca-west-1": {
+                "armbyol": "ami-0d00a4335e0fe046e",
+                "armpayg": "ami-055a2fa28f140dc9e",
+                "x86byol": "ami-08c620242e8615d6b",
+                "x86payg": "ami-0c65ce4baab22fd31"
+            },
+            "eu-central-1": {
+                "armbyol": "ami-0691f492b8aabed16",
+                "armpayg": "ami-0897e485216cd83f1",
+                "x86byol": "ami-08f6b4a95c4dc816b",
+                "x86payg": "ami-0ebd6316e41474b30"
+            },
+            "eu-central-2": {
+                "armbyol": "ami-0f78eaa7f72ee0acb",
+                "armpayg": "ami-05fb66973a73b5b8d",
+                "x86byol": "ami-043858c596709fe1a",
+                "x86payg": "ami-0d2feccf892d860b6"
+            },
+            "eu-north-1": {
+                "armbyol": "ami-0f7ca05d25a7df3fc",
+                "armpayg": "ami-05c5fc80582e34607",
+                "x86byol": "ami-0546ad7b7f07f8788",
+                "x86payg": "ami-0e46c7d37bd538b89"
+            },
+            "eu-south-1": {
+                "armbyol": "ami-071b74db8c68f2eb3",
+                "armpayg": "ami-0b1525e9ef4d10698",
+                "x86byol": "ami-0d41963bfa1d197e2",
+                "x86payg": "ami-05f708634ca3ff2d4"
+            },
+            "eu-south-2": {
+                "armbyol": "ami-027073bc80bfd55fe",
+                "armpayg": "ami-0e9f6e9c6b8671a2d",
+                "x86byol": "ami-00754d3493eee3efd",
+                "x86payg": "ami-02ada2d34605e6615"
+            },
+            "eu-west-1": {
+                "armbyol": "ami-048cf952b69294bb2",
+                "armpayg": "ami-00d9ead721dfaf527",
+                "x86byol": "ami-0a384d1748bf21e70",
+                "x86payg": "ami-07a4a3570d3117474"
+            },
+            "eu-west-2": {
+                "armbyol": "ami-087fcf0ff9a5f504d",
+                "armpayg": "ami-038cec9a69a5e03d4",
+                "x86byol": "ami-0c439ff75a7838a13",
+                "x86payg": "ami-0c6bfe978ea534ff3"
+            },
+            "eu-west-3": {
+                "armbyol": "ami-00ab0b4d24f8dacf2",
+                "armpayg": "ami-05590ca0786a39b6f",
+                "x86byol": "ami-0afc698fe61d0d7fa",
+                "x86payg": "ami-0c4d486d7e7cef158"
+            },
+            "il-central-1": {
+                "armbyol": "ami-0e3a916cc8de0e90e",
+                "armpayg": "ami-0bcf25d178298fd0a",
+                "x86byol": "ami-030d7eeff68167332",
+                "x86payg": "ami-0581c380ae55b77b9"
+            },
+            "mx-central-1": {
+                "armbyol": "ami-07d09c5b8df90be41",
+                "armpayg": "ami-04216e1f1df00c3c4",
+                "x86byol": "ami-09d3b0f7e95d8bd1a",
+                "x86payg": "ami-00ed9bb428293d6d9"
+            },
+            "sa-east-1": {
+                "armbyol": "ami-0f533b5f844360273",
+                "armpayg": "ami-01726ecc6b3510449",
+                "x86byol": "ami-0ba2f033294524226",
+                "x86payg": "ami-037d3c88c7ef47320"
+            },
+            "us-east-1": {
+                "armbyol": "ami-0938d5f314e1496a5",
+                "armpayg": "ami-08227f22575dda27d",
+                "x86byol": "ami-0b10f99ddb71cacda",
+                "x86payg": "ami-0952cc960307ac712"
+            },
+            "us-east-2": {
+                "armbyol": "ami-07ae0b385479fcff2",
+                "armpayg": "ami-004815935e3a0ec24",
+                "x86byol": "ami-097289a2e1b0b2b45",
+                "x86payg": "ami-01ce042b8d8c861ad"
+            },
+            "us-west-1": {
+                "armbyol": "ami-0c64e14ed328b3f19",
+                "armpayg": "ami-0575e83efe4520dd6",
+                "x86byol": "ami-03d7def66d7017003",
+                "x86payg": "ami-0a6ec2841fdf86019"
+            },
+            "us-west-2": {
+                "armbyol": "ami-097e5da546553d170",
+                "armpayg": "ami-0434fb3bf60dc2dba",
+                "x86byol": "ami-058d68276defbe7b5",
+                "x86payg": "ami-0d54b65f9858df8ae"
+            }
+        }
+    },
+    "Resources": {
+        "SecurityVpc": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": {
+                    "Ref": "VpcCidr"
+                },
+                "EnableDnsSupport": true,
+                "EnableDnsHostnames": true,
+                "InstanceTenancy": "default",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Cloudformation fgt demo"
+                    }
+                ]
+            }
+        },
+        "PublicSubnetAz1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "CidrBlock": {
+                    "Ref": "PublicCidrAz1"
+                },
+                "AvailabilityZone": {
+                    "Ref": "AZ1"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "public subnet az1"
+                    }
+                ]
+            }
+        },
+        "PrivateSubnetAz1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "CidrBlock": {
+                    "Ref": "PrivateCidrAz1"
+                },
+                "AvailabilityZone": {
+                    "Ref": "AZ1"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "private subnet az1"
+                    }
+                ]
+            }
+        },
+        "PublicSubnetAz2": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "CidrBlock": {
+                    "Ref": "PublicCidrAz2"
+                },
+                "AvailabilityZone": {
+                    "Ref": "AZ2"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "public subnet az2"
+                    }
+                ]
+            }
+        },
+        "PrivateSubnetAz2": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "CidrBlock": {
+                    "Ref": "PrivateCidrAz2"
+                },
+                "AvailabilityZone": {
+                    "Ref": "AZ2"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "private subnet az2"
+                    }
+                ]
+            }
+        },
+        "CustomerVpc": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": {
+                    "Ref": "CsVpcCidr"
+                },
+                "EnableDnsSupport": true,
+                "EnableDnsHostnames": true,
+                "InstanceTenancy": "default",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Cloudformation customer demo"
+                    }
+                ]
+            }
+        },
+        "CsPublicSubnetAz1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "CustomerVpc"
+                },
+                "CidrBlock": {
+                    "Ref": "CsPublicCidrAz1"
+                },
+                "AvailabilityZone": {
+                    "Ref": "AZ1"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "cs public subnet az1"
+                    }
+                ]
+            }
+        },
+        "CsPrivateSubnetAz1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "CustomerVpc"
+                },
+                "CidrBlock": {
+                    "Ref": "CsPrivateCidrAz1"
+                },
+                "AvailabilityZone": {
+                    "Ref": "AZ1"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "cs private subnet az1"
+                    }
+                ]
+            }
+        },
+        "CsPublicSubnetAz2": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "CustomerVpc"
+                },
+                "CidrBlock": {
+                    "Ref": "CsPublicCidrAz2"
+                },
+                "AvailabilityZone": {
+                    "Ref": "AZ2"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "cs public subnet az2"
+                    }
+                ]
+            }
+        },
+        "CsPrivateSubnetAz2": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "CustomerVpc"
+                },
+                "CidrBlock": {
+                    "Ref": "CsPrivateCidrAz2"
+                },
+                "AvailabilityZone": {
+                    "Ref": "AZ2"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "cs private subnet az2"
+                    }
+                ]
+            }
+        },
+        "SecurityIgw": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "fgtvm-igw"
+                    }
+                ]
+            }
+        },
+        "SecurityIgwAttachment": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "InternetGatewayId": {
+                    "Ref": "SecurityIgw"
+                }
+            }
+        },
+        "CustomerIgw": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "cs-igw"
+                    }
+                ]
+            }
+        },
+        "CustomerIgwAttachment": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "CustomerVpc"
+                },
+                "InternetGatewayId": {
+                    "Ref": "CustomerIgw"
+                }
+            }
+        },
+        "SecurityPublicRt": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "fgtvm-public-rt"
+                    }
+                ]
+            }
+        },
+        "SecurityPrivateRtAz1": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "fgtvm-private-rt"
+                    }
+                ]
+            }
+        },
+        "SecurityPrivateRtAz2": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "fgtvm-private-rt2"
+                    }
+                ]
+            }
+        },
+        "SecurityPublicDefaultRoute": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "SecurityIgwAttachment",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "SecurityPublicRt"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "SecurityIgw"
+                }
+            }
+        },
+        "SecurityPrivateRouteAz1": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "Fgt1Eth1Attachment",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "SecurityPrivateRtAz1"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NetworkInterfaceId": {
+                    "Ref": "Fgt1Eth1"
+                }
+            }
+        },
+        "SecurityPrivateRouteAz2": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "Fgt2Eth1Attachment",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "SecurityPrivateRtAz2"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NetworkInterfaceId": {
+                    "Ref": "Fgt2Eth1"
+                }
+            }
+        },
+        "PublicSubnetAz1Association": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PublicSubnetAz1"
+                },
+                "RouteTableId": {
+                    "Ref": "SecurityPublicRt"
+                }
+            }
+        },
+        "PublicSubnetAz2Association": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PublicSubnetAz2"
+                },
+                "RouteTableId": {
+                    "Ref": "SecurityPublicRt"
+                }
+            }
+        },
+        "PrivateSubnetAz1Association": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PrivateSubnetAz1"
+                },
+                "RouteTableId": {
+                    "Ref": "SecurityPrivateRtAz1"
+                }
+            }
+        },
+        "PrivateSubnetAz2Association": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PrivateSubnetAz2"
+                },
+                "RouteTableId": {
+                    "Ref": "SecurityPrivateRtAz2"
+                }
+            }
+        },
+        "CsEdgeRt": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "CustomerVpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "cs-public-edge-rt"
+                    }
+                ]
+            }
+        },
+        "CsPublicRt": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "CustomerVpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "cs-public-egress-rt"
+                    }
+                ]
+            }
+        },
+        "CsPrivateRtAz1": {
+            "Type": "AWS::EC2::RouteTable",
+            "DependsOn": "GwlbEndpointAz1",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "CustomerVpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "cs-private-rt"
+                    }
+                ]
+            }
+        },
+        "CsPrivateRtAz2": {
+            "Type": "AWS::EC2::RouteTable",
+            "DependsOn": "GwlbEndpointAz2",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "CustomerVpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "cs-private-rt2"
+                    }
+                ]
+            }
+        },
+        "CsEdgeRouteAz1": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "CsEdgeRt"
+                },
+                "DestinationCidrBlock": {
+                    "Ref": "CsPrivateCidrAz1"
+                },
+                "VpcEndpointId": {
+                    "Ref": "GwlbEndpointAz1"
+                }
+            }
+        },
+        "CsEdgeRouteAz2": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "CsEdgeRt"
+                },
+                "DestinationCidrBlock": {
+                    "Ref": "CsPrivateCidrAz2"
+                },
+                "VpcEndpointId": {
+                    "Ref": "GwlbEndpointAz2"
+                }
+            }
+        },
+        "CsPrivateDefaultRouteAz1": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "CsPrivateRtAz1"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "VpcEndpointId": {
+                    "Ref": "GwlbEndpointAz1"
+                }
+            }
+        },
+        "CsPrivateDefaultRouteAz2": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "CsPrivateRtAz2"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "VpcEndpointId": {
+                    "Ref": "GwlbEndpointAz2"
+                }
+            }
+        },
+        "CsPublicDefaultRoute": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "CustomerIgwAttachment",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "CsPublicRt"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "CustomerIgw"
+                }
+            }
+        },
+        "CsEdgeRtAssociation": {
+            "Type": "AWS::EC2::GatewayRouteTableAssociation",
+            "DependsOn": "CustomerIgwAttachment",
+            "Properties": {
+                "GatewayId": {
+                    "Ref": "CustomerIgw"
+                },
+                "RouteTableId": {
+                    "Ref": "CsEdgeRt"
+                }
+            }
+        },
+        "CsPrivateSubnetAz1Association": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "CsPrivateSubnetAz1"
+                },
+                "RouteTableId": {
+                    "Ref": "CsPrivateRtAz1"
+                }
+            }
+        },
+        "CsPrivateSubnetAz2Association": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "CsPrivateSubnetAz2"
+                },
+                "RouteTableId": {
+                    "Ref": "CsPrivateRtAz2"
+                }
+            }
+        },
+        "CsPublicSubnetAz1Association": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "CsPublicSubnetAz1"
+                },
+                "RouteTableId": {
+                    "Ref": "CsPublicRt"
+                }
+            }
+        },
+        "CsPublicSubnetAz2Association": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "CsPublicSubnetAz2"
+                },
+                "RouteTableId": {
+                    "Ref": "CsPublicRt"
+                }
+            }
+        },
+        "PublicAllowSg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "Public Allow",
+                "GroupDescription": "Public Allow traffic",
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "6",
+                        "FromPort": 22,
+                        "ToPort": 22,
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "SSH"
+                    },
+                    {
+                        "IpProtocol": "6",
+                        "FromPort": 443,
+                        "ToPort": 443,
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "HTTPS admin"
+                    },
+                    {
+                        "IpProtocol": "6",
+                        "FromPort": 8443,
+                        "ToPort": 8443,
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "HTTPS admin alt"
+                    }
+                ],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "-1",
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "All outbound"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Public Allow"
+                    }
+                ]
+            }
+        },
+        "AllowAllSg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "Allow All",
+                "GroupDescription": "Allow all traffic",
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "-1",
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "All inbound"
+                    }
+                ],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "-1",
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "All outbound"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Allow All"
+                    }
+                ]
+            }
+        },
+        "Fgt1Eth0": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "Description": "fgtvm-port1",
+                "SubnetId": {
+                    "Ref": "PublicSubnetAz1"
+                },
+                "GroupSet": [
+                    {
+                        "Ref": "PublicAllowSg"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "fgtvm-port1"
+                    }
+                ]
+            }
+        },
+        "Fgt1Eth1": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "Description": "fgtvm-port2",
+                "SubnetId": {
+                    "Ref": "PrivateSubnetAz1"
+                },
+                "GroupSet": [
+                    {
+                        "Ref": "AllowAllSg"
+                    }
+                ],
+                "SourceDestCheck": false,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "fgtvm-port2"
+                    }
+                ]
+            }
+        },
+        "Fgt2Eth0": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "Description": "fgtvm2-port1",
+                "SubnetId": {
+                    "Ref": "PublicSubnetAz2"
+                },
+                "GroupSet": [
+                    {
+                        "Ref": "PublicAllowSg"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "fgtvm2-port1"
+                    }
+                ]
+            }
+        },
+        "Fgt2Eth1": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "Description": "fgtvm2-port2",
+                "SubnetId": {
+                    "Ref": "PrivateSubnetAz2"
+                },
+                "GroupSet": [
+                    {
+                        "Ref": "AllowAllSg"
+                    }
+                ],
+                "SourceDestCheck": false,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "fgtvm2-port2"
+                    }
+                ]
+            }
+        },
+        "Gwlb": {
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties": {
+                "Name": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "gatewaylb",
+                            {
+                                "Fn::Select": [
+                                    0,
+                                    {
+                                        "Fn::Split": [
+                                            "-",
+                                            {
+                                                "Fn::Select": [
+                                                    2,
+                                                    {
+                                                        "Fn::Split": [
+                                                            "/",
+                                                            {
+                                                                "Ref": "AWS::StackId"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "Type": "gateway",
+                "Subnets": [
+                    {
+                        "Ref": "PrivateSubnetAz1"
+                    },
+                    {
+                        "Ref": "PrivateSubnetAz2"
+                    }
+                ],
+                "LoadBalancerAttributes": [
+                    {
+                        "Key": "load_balancing.cross_zone.enabled",
+                        "Value": "true"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": "Cloudformation sample"
+                    }
+                ]
+            }
+        },
+        "FgtTargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "Name": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "fgttarget",
+                            {
+                                "Fn::Select": [
+                                    0,
+                                    {
+                                        "Fn::Split": [
+                                            "-",
+                                            {
+                                                "Fn::Select": [
+                                                    2,
+                                                    {
+                                                        "Fn::Split": [
+                                                            "/",
+                                                            {
+                                                                "Ref": "AWS::StackId"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "Protocol": "GENEVE",
+                "Port": 6081,
+                "TargetType": "ip",
+                "HealthCheckProtocol": "TCP",
+                "HealthCheckPort": "8008",
+                "Targets": [
+                    {
+                        "Id": {
+                            "Fn::GetAtt": [
+                                "Fgt1Eth1",
+                                "PrimaryPrivateIpAddress"
+                            ]
+                        },
+                        "Port": 6081
+                    },
+                    {
+                        "Id": {
+                            "Fn::GetAtt": [
+                                "Fgt2Eth1",
+                                "PrimaryPrivateIpAddress"
+                            ]
+                        },
+                        "Port": 6081
+                    }
+                ]
+            }
+        },
+        "FgtListener": {
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+            "Properties": {
+                "LoadBalancerArn": {
+                    "Ref": "Gwlb"
+                },
+                "DefaultActions": [
+                    {
+                        "Type": "forward",
+                        "TargetGroupArn": {
+                            "Ref": "FgtTargetGroup"
+                        }
+                    }
+                ]
+            }
+        },
+        "GwlbEndpointService": {
+            "Type": "AWS::EC2::VPCEndpointService",
+            "Properties": {
+                "AcceptanceRequired": false,
+                "GatewayLoadBalancerArns": [
+                    {
+                        "Ref": "Gwlb"
+                    }
+                ]
+            }
+        },
+        "GwlbEndpointAz1": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "CustomerVpc"
+                },
+                "ServiceName": {
+                    "Fn::Sub": "com.amazonaws.vpce.${AWS::Region}.${GwlbEndpointService}"
+                },
+                "VpcEndpointType": "GatewayLoadBalancer",
+                "SubnetIds": [
+                    {
+                        "Ref": "CsPublicSubnetAz1"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "cs-gwlb-endpoint-az1"
+                    }
+                ]
+            }
+        },
+        "GwlbEndpointAz2": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "CustomerVpc"
+                },
+                "ServiceName": {
+                    "Fn::Sub": "com.amazonaws.vpce.${AWS::Region}.${GwlbEndpointService}"
+                },
+                "VpcEndpointType": "GatewayLoadBalancer",
+                "SubnetIds": [
+                    {
+                        "Ref": "CsPublicSubnetAz2"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "cs-gwlb-endpoint-az2"
+                    }
+                ]
+            }
+        },
+        "BootstrapBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Condition": "UseS3",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "ftnts3boot",
+                            {
+                                "Fn::Select": [
+                                    0,
+                                    {
+                                        "Fn::Split": [
+                                            "-",
+                                            {
+                                                "Fn::Select": [
+                                                    2,
+                                                    {
+                                                        "Fn::Split": [
+                                                            "/",
+                                                            {
+                                                                "Ref": "AWS::StackId"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                }
+            }
+        },
+        "FortiGateRole": {
+            "Type": "AWS::IAM::Role",
+            "Condition": "UseS3",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ec2.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyName": "fgt-bootstrap-s3",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:ListBucket"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Sub": "arn:${AWS::Partition}:s3:::${BootstrapBucket}"
+                                    }
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:PutObject",
+                                        "s3:GetObject",
+                                        "s3:DeleteObject"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Sub": "arn:${AWS::Partition}:s3:::${BootstrapBucket}/*"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "FortiGateInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Condition": "UseS3",
+            "Properties": {
+                "Roles": [
+                    {
+                        "Ref": "FortiGateRole"
+                    }
+                ]
+            }
+        },
+        "S3Endpoint": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Condition": "UseS3",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "SecurityVpc"
+                },
+                "ServiceName": {
+                    "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+                },
+                "VpcEndpointType": "Gateway",
+                "RouteTableIds": [
+                    {
+                        "Ref": "SecurityPublicRt"
+                    }
+                ],
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "*",
+                            "Effect": "Allow",
+                            "Resource": "*",
+                            "Principal": "*"
+                        }
+                    ]
+                }
+            }
+        },
+        "BootstrapHelperRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyName": "bootstrap-helper",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": "ec2:DescribeNetworkInterfaces",
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*"
+                                    }
+                                },
+                                {
+                                    "Fn::If": [
+                                        "UseS3",
+                                        {
+                                            "Effect": "Allow",
+                                            "Action": [
+                                                "s3:PutObject",
+                                                "s3:DeleteObject"
+                                            ],
+                                            "Resource": {
+                                                "Fn::Sub": "arn:${AWS::Partition}:s3:::${BootstrapBucket}/*"
+                                            }
+                                        },
+                                        {
+                                            "Ref": "AWS::NoValue"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "Fn::If": [
+                                        "CopyLicenseFiles",
+                                        {
+                                            "Effect": "Allow",
+                                            "Action": "s3:GetObject",
+                                            "Resource": {
+                                                "Fn::Sub": "arn:${AWS::Partition}:s3:::${LicenseSourceBucket}/*"
+                                            }
+                                        },
+                                        {
+                                            "Ref": "AWS::NoValue"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "BootstrapHelper": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Description": {
+                    "Fn::Sub": "${AWS::StackName} - GWLB ENI lookup and FortiGate bootstrap staging"
+                },
+                "Handler": "index.handler",
+                "Runtime": "python3.12",
+                "Timeout": 300,
+                "MemorySize": 128,
+                "Role": {
+                    "Fn::GetAtt": [
+                        "BootstrapHelperRole",
+                        "Arn"
+                    ]
+                },
+                "Code": {
+                    "ZipFile": "import ipaddress\nimport logging\nimport time\n\nimport boto3\nimport cfnresponse\n\nlog = logging.getLogger()\nlog.setLevel(logging.INFO)\n\nec2 = boto3.client(\"ec2\")\ns3 = boto3.client(\"s3\")\n\n\ndef find_gwlb_eni(glob, subnet_id):\n    \"\"\"Private IP of the GWLB's own ENI in one subnet.\n\n    CloudFormation's \"*ELB*\" filter would also match an unrelated load\n    balancer in the same VPC and AZ. This glob is \"*\" + the load\n    balancer's full name, paired with the subnet, so exactly one\n    interface can match.\n    \"\"\"\n    for _ in range(20):\n        found = ec2.describe_network_interfaces(\n            Filters=[\n                {\"Name\": \"description\", \"Values\": [glob]},\n                {\"Name\": \"subnet-id\", \"Values\": [subnet_id]},\n            ]\n        ).get(\"NetworkInterfaces\", [])\n        if found:\n            ip = found[0][\"PrivateIpAddress\"]\n            log.info(\"gwlb eni in %s -> %s\", subnet_id, ip)\n            return ip\n        time.sleep(5)\n    raise RuntimeError(\"no GWLB ENI found in subnet \" + subnet_id)\n\n\ndef describe_gwlb_eni(props):\n    data = {}\n    for n, subnet in enumerate(props[\"Subnets\"], 1):\n        data[\"Ip%d\" % n] = find_gwlb_eni(props[\"DescriptionGlob\"], subnet)\n    # CloudFormation used cidrhost(cidr, 1). Splitting octets with\n    # intrinsics would be wrong for any prefix longer than /24.\n    for n, cidr in enumerate(props[\"Cidrs\"], 1):\n        data[\"Gw%d\" % n] = str(next(ipaddress.ip_network(cidr).hosts()))\n    return data\n\n\ndef fgt_bootstrap(props, request_type):\n    \"\"\"Echo one FortiGate's rendered config, and stage it in S3.\n\n    Returning it through Data[\"Config\"] is what lets the config be\n    written once in the template and still reach both delivery paths.\n    A custom resource response body is capped at 4096 bytes; the stock\n    config uses well under half, but mind that before growing it.\n    \"\"\"\n    body = props[\"ConfigBody\"]\n    bucket = props.get(\"Bucket\") or \"\"\n    key = props[\"ConfigKey\"]\n    source = props.get(\"LicenseSourceBucket\") or \"\"\n    licence = props.get(\"LicenseKey\") or \"\"\n\n    if not bucket:\n        return {\"Config\": body}\n\n    if request_type == \"Delete\":\n        # CloudFormation cannot delete a bucket that still holds\n        # objects, so remove everything this resource put there.\n        for gone in [key] + ([licence] if source and licence else []):\n            try:\n                s3.delete_object(Bucket=bucket, Key=gone)\n                log.info(\"deleted s3://%s/%s\", bucket, gone)\n            except Exception as exc:\n                log.warning(\"could not delete %s: %s\", gone, exc)\n        return {\"Config\": body}\n\n    s3.put_object(Bucket=bucket, Key=key, Body=body.encode(\"utf-8\"))\n    log.info(\"wrote s3://%s/%s (%d bytes)\", bucket, key, len(body))\n    if source and licence:\n        s3.copy_object(\n            Bucket=bucket,\n            Key=licence,\n            CopySource={\"Bucket\": source, \"Key\": licence},\n        )\n        log.info(\"copied s3://%s/%s\", source, licence)\n    return {\"Config\": body}\n\n\ndef handler(event, context):\n    # Resolved before the try: anything that raises above\n    # cfnresponse.send leaves the stack waiting an hour for a reply.\n    request_type = event.get(\"RequestType\", \"Create\")\n    physical_id = (event.get(\"PhysicalResourceId\")\n                   or event.get(\"LogicalResourceId\", \"helper\"))\n    try:\n        props = event[\"ResourceProperties\"]\n        action = props[\"Action\"]\n        log.info(\"%s %s (%s)\", request_type, action, physical_id)\n        if action == \"describe-gwlb-eni\":\n            # Unlike the reference template this re-resolves on\n            # Update, so a replaced load balancer is picked up.\n            data = {} if request_type == \"Delete\" else describe_gwlb_eni(props)\n        elif action == \"fgt-bootstrap\":\n            data = fgt_bootstrap(props, request_type)\n        else:\n            raise RuntimeError(\"unknown action \" + repr(action))\n        cfnresponse.send(event, context, cfnresponse.SUCCESS, data, physical_id)\n    except Exception as exc:\n        log.exception(\"%s failed\", request_type)\n        # Failing a Delete would strand the stack in DELETE_FAILED.\n        status = cfnresponse.SUCCESS if request_type == \"Delete\" else cfnresponse.FAILED\n        cfnresponse.send(event, context, status, {\"Error\": str(exc)}, physical_id)\n"
+                }
+            }
+        },
+        "GwlbEniLookup": {
+            "Type": "Custom::GwlbEniLookup",
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "BootstrapHelper",
+                        "Arn"
+                    ]
+                },
+                "Action": "describe-gwlb-eni",
+                "DescriptionGlob": {
+                    "Fn::Sub": "*${Gwlb.LoadBalancerFullName}"
+                },
+                "Subnets": [
+                    {
+                        "Ref": "PrivateSubnetAz1"
+                    },
+                    {
+                        "Ref": "PrivateSubnetAz2"
+                    }
+                ],
+                "Cidrs": [
+                    {
+                        "Ref": "PrivateCidrAz1"
+                    },
+                    {
+                        "Ref": "PrivateCidrAz2"
+                    }
+                ]
+            }
+        },
+        "Fgt1Bootstrap": {
+            "Type": "Custom::FgtBootstrap",
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "BootstrapHelper",
+                        "Arn"
+                    ]
+                },
+                "Action": "fgt-bootstrap",
+                "Bucket": {
+                    "Fn::If": [
+                        "UseS3",
+                        {
+                            "Ref": "BootstrapBucket"
+                        },
+                        ""
+                    ]
+                },
+                "ConfigKey": "fgtvm.conf",
+                "LicenseSourceBucket": {
+                    "Fn::If": [
+                        "CopyLicenseFiles",
+                        {
+                            "Ref": "LicenseSourceBucket"
+                        },
+                        ""
+                    ]
+                },
+                "LicenseKey": {
+                    "Fn::If": [
+                        "CopyLicenseFiles",
+                        {
+                            "Ref": "LicenseKey1"
+                        },
+                        ""
+                    ]
+                },
+                "ConfigBody": {
+                    "Fn::Sub": [
+                        "config system global\nset hostname FGTVM-GWLB\nset admin-sport ${adminsport}\nend\nconfig system interface\nedit port1\nset alias public\nset mode dhcp\nset allowaccess ping https ssh fgfm\nnext\nedit port2\nset alias private\nset mode dhcp\nset allowaccess ping https ssh fgfm probe-response\nset defaultgw disable\nnext\nend\nconfig system probe-response\nset mode http-probe\nend\nconfig system global\nset vdom-mode multi-vdom\nend\nconfig vdom\nedit root\nconfig system settings\n    set vdom-type admin\nend\nnext\nedit FG-traffic\nnext\nend\nconfig global\nconfig system interface\nedit port2\nset vdom FG-traffic\nnext\nend\nend\nconfig vdom\nedit FG-traffic\nconfig system geneve\nedit \"awsgeneve\"\nset interface \"port2\"\nset type ppp\nset remote-ip ${endpointip}\nnext\nedit \"awsgeneve2\"\nset interface \"port2\"\nset type ppp\nset remote-ip ${endpointip2}\nnext\nend\nconfig system zone\nedit awszone\nset interface awsgeneve awsgeneve2\nnext\nend\nconfig firewall policy\nedit 1\nset name \"test\"\nset srcintf \"awszone\"\nset dstintf \"awszone\"\nset srcaddr \"all\"\nset dstaddr \"all\"\nset action accept\nset schedule \"always\"\nset service \"ALL\"\nset logtraffic all\nnext\nend\nconfig router static\nedit 1\nset device awsgeneve\nnext\nedit 2\nset device awsgeneve2\nnext\nedit 3\nset device port2\nset dst ${dst}\nset gateway ${gateway}\nnext\nend\nconfig router policy\nedit 1\nset input-device \"awsgeneve\"\nset src \"0.0.0.0/0.0.0.0\"\nset dst \"0.0.0.0/0.0.0.0\"\nset output-device \"awsgeneve\"\nnext\nedit 2\nset input-device \"awsgeneve2\"\nset src \"0.0.0.0/0.0.0.0\"\nset dst \"0.0.0.0/0.0.0.0\"\nset output-device \"awsgeneve2\"\nnext\nend\n",
+                        {
+                            "adminsport": {
+                                "Ref": "AdminSPort"
+                            },
+                            "dst": {
+                                "Ref": "PrivateCidrAz2"
+                            },
+                            "gateway": {
+                                "Fn::GetAtt": [
+                                    "GwlbEniLookup",
+                                    "Gw1"
+                                ]
+                            },
+                            "endpointip": {
+                                "Fn::GetAtt": [
+                                    "GwlbEniLookup",
+                                    "Ip1"
+                                ]
+                            },
+                            "endpointip2": {
+                                "Fn::GetAtt": [
+                                    "GwlbEniLookup",
+                                    "Ip2"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "Fgt2Bootstrap": {
+            "Type": "Custom::FgtBootstrap",
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "BootstrapHelper",
+                        "Arn"
+                    ]
+                },
+                "Action": "fgt-bootstrap",
+                "Bucket": {
+                    "Fn::If": [
+                        "UseS3",
+                        {
+                            "Ref": "BootstrapBucket"
+                        },
+                        ""
+                    ]
+                },
+                "ConfigKey": "fgtvm.conf2",
+                "LicenseSourceBucket": {
+                    "Fn::If": [
+                        "CopyLicenseFiles",
+                        {
+                            "Ref": "LicenseSourceBucket"
+                        },
+                        ""
+                    ]
+                },
+                "LicenseKey": {
+                    "Fn::If": [
+                        "CopyLicenseFiles",
+                        {
+                            "Ref": "LicenseKey2"
+                        },
+                        ""
+                    ]
+                },
+                "ConfigBody": {
+                    "Fn::Sub": [
+                        "config system global\nset hostname FGTVM-GWLB\nset admin-sport ${adminsport}\nend\nconfig system interface\nedit port1\nset alias public\nset mode dhcp\nset allowaccess ping https ssh fgfm\nnext\nedit port2\nset alias private\nset mode dhcp\nset allowaccess ping https ssh fgfm probe-response\nset defaultgw disable\nnext\nend\nconfig system probe-response\nset mode http-probe\nend\nconfig system global\nset vdom-mode multi-vdom\nend\nconfig vdom\nedit root\nconfig system settings\n    set vdom-type admin\nend\nnext\nedit FG-traffic\nnext\nend\nconfig global\nconfig system interface\nedit port2\nset vdom FG-traffic\nnext\nend\nend\nconfig vdom\nedit FG-traffic\nconfig system geneve\nedit \"awsgeneve\"\nset interface \"port2\"\nset type ppp\nset remote-ip ${endpointip}\nnext\nedit \"awsgeneve2\"\nset interface \"port2\"\nset type ppp\nset remote-ip ${endpointip2}\nnext\nend\nconfig system zone\nedit awszone\nset interface awsgeneve awsgeneve2\nnext\nend\nconfig firewall policy\nedit 1\nset name \"test\"\nset srcintf \"awszone\"\nset dstintf \"awszone\"\nset srcaddr \"all\"\nset dstaddr \"all\"\nset action accept\nset schedule \"always\"\nset service \"ALL\"\nset logtraffic all\nnext\nend\nconfig router static\nedit 1\nset device awsgeneve\nnext\nedit 2\nset device awsgeneve2\nnext\nedit 3\nset device port2\nset dst ${dst}\nset gateway ${gateway}\nnext\nend\nconfig router policy\nedit 1\nset input-device \"awsgeneve\"\nset src \"0.0.0.0/0.0.0.0\"\nset dst \"0.0.0.0/0.0.0.0\"\nset output-device \"awsgeneve\"\nnext\nedit 2\nset input-device \"awsgeneve2\"\nset src \"0.0.0.0/0.0.0.0\"\nset dst \"0.0.0.0/0.0.0.0\"\nset output-device \"awsgeneve2\"\nnext\nend\n",
+                        {
+                            "adminsport": {
+                                "Ref": "AdminSPort"
+                            },
+                            "dst": {
+                                "Ref": "PrivateCidrAz1"
+                            },
+                            "gateway": {
+                                "Fn::GetAtt": [
+                                    "GwlbEniLookup",
+                                    "Gw2"
+                                ]
+                            },
+                            "endpointip": {
+                                "Fn::GetAtt": [
+                                    "GwlbEniLookup",
+                                    "Ip1"
+                                ]
+                            },
+                            "endpointip2": {
+                                "Fn::GetAtt": [
+                                    "GwlbEniLookup",
+                                    "Ip2"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "Fgt1": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId": {
+                    "Fn::If": [
+                        "HasAmiOverride",
+                        {
+                            "Ref": "FortiGateAmiOverride"
+                        },
+                        {
+                            "Fn::FindInMap": [
+                                "FortiGateAmi",
+                                {
+                                    "Ref": "AWS::Region"
+                                },
+                                {
+                                    "Fn::FindInMap": [
+                                        "ArchLicenseKey",
+                                        {
+                                            "Ref": "Arch"
+                                        },
+                                        {
+                                            "Ref": "LicenseType"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "IamInstanceProfile": {
+                    "Fn::If": [
+                        "UseS3",
+                        {
+                            "Ref": "FortiGateInstanceProfile"
+                        },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                },
+                "NetworkInterfaces": [
+                    {
+                        "NetworkInterfaceId": {
+                            "Ref": "Fgt1Eth0"
+                        },
+                        "DeviceIndex": 0
+                    }
+                ],
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/sda1",
+                        "Ebs": {
+                            "VolumeType": "gp2",
+                            "VolumeSize": 2,
+                            "DeleteOnTermination": true
+                        }
+                    },
+                    {
+                        "DeviceName": "/dev/sdb",
+                        "Ebs": {
+                            "VolumeType": "gp2",
+                            "VolumeSize": 30,
+                            "DeleteOnTermination": true
+                        }
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::If": [
+                            "UseS3",
+                            {
+                                "Fn::Sub": [
+                                    "{\"bucket\":\"${bucket}\",\"region\":\"${AWS::Region}\"${lic},\"config\":\"fgtvm.conf\"}",
+                                    {
+                                        "bucket": {
+                                            "Ref": "BootstrapBucket"
+                                        },
+                                        "lic": {
+                                            "Fn::If": [
+                                                "IsByol",
+                                                {
+                                                    "Fn::Sub": ",\"license\":\"${LicenseKey1}\""
+                                                },
+                                                ""
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::Join": [
+                                    "\n",
+                                    [
+                                        "Content-Type: multipart/mixed; boundary='==Boundary=='",
+                                        "MIME-Version: 1.0",
+                                        "",
+                                        "--==Boundary==",
+                                        "Content-Type: text/x-shellscript; charset='us-ascii'",
+                                        "MIME-Version: 1.0",
+                                        "",
+                                        {
+                                            "Fn::GetAtt": [
+                                                "Fgt1Bootstrap",
+                                                "Config"
+                                            ]
+                                        },
+                                        {
+                                            "Fn::If": [
+                                                "InlineLicense",
+                                                {
+                                                    "Ref": "AWS::NoValue"
+                                                },
+                                                {
+                                                    "Ref": "AWS::NoValue"
+                                                }
+                                            ]
+                                        },
+                                        "--==Boundary==--"
+                                    ]
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "FortiGateVM-az1"
+                    }
+                ]
+            }
+        },
+        "Fgt1Eth1Attachment": {
+            "Type": "AWS::EC2::NetworkInterfaceAttachment",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "Fgt1"
+                },
+                "NetworkInterfaceId": {
+                    "Ref": "Fgt1Eth1"
+                },
+                "DeviceIndex": 1,
+                "DeleteOnTermination": false
+            }
+        },
+        "Fgt2": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId": {
+                    "Fn::If": [
+                        "HasAmiOverride",
+                        {
+                            "Ref": "FortiGateAmiOverride"
+                        },
+                        {
+                            "Fn::FindInMap": [
+                                "FortiGateAmi",
+                                {
+                                    "Ref": "AWS::Region"
+                                },
+                                {
+                                    "Fn::FindInMap": [
+                                        "ArchLicenseKey",
+                                        {
+                                            "Ref": "Arch"
+                                        },
+                                        {
+                                            "Ref": "LicenseType"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "IamInstanceProfile": {
+                    "Fn::If": [
+                        "UseS3",
+                        {
+                            "Ref": "FortiGateInstanceProfile"
+                        },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                },
+                "NetworkInterfaces": [
+                    {
+                        "NetworkInterfaceId": {
+                            "Ref": "Fgt2Eth0"
+                        },
+                        "DeviceIndex": 0
+                    }
+                ],
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/sda1",
+                        "Ebs": {
+                            "VolumeType": "gp2",
+                            "VolumeSize": 2,
+                            "DeleteOnTermination": true
+                        }
+                    },
+                    {
+                        "DeviceName": "/dev/sdb",
+                        "Ebs": {
+                            "VolumeType": "gp2",
+                            "VolumeSize": 30,
+                            "DeleteOnTermination": true
+                        }
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::If": [
+                            "UseS3",
+                            {
+                                "Fn::Sub": [
+                                    "{\"bucket\":\"${bucket}\",\"region\":\"${AWS::Region}\"${lic},\"config\":\"fgtvm.conf2\"}",
+                                    {
+                                        "bucket": {
+                                            "Ref": "BootstrapBucket"
+                                        },
+                                        "lic": {
+                                            "Fn::If": [
+                                                "IsByol",
+                                                {
+                                                    "Fn::Sub": ",\"license\":\"${LicenseKey2}\""
+                                                },
+                                                ""
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::Join": [
+                                    "\n",
+                                    [
+                                        "Content-Type: multipart/mixed; boundary='==Boundary=='",
+                                        "MIME-Version: 1.0",
+                                        "",
+                                        "--==Boundary==",
+                                        "Content-Type: text/x-shellscript; charset='us-ascii'",
+                                        "MIME-Version: 1.0",
+                                        "",
+                                        {
+                                            "Fn::GetAtt": [
+                                                "Fgt2Bootstrap",
+                                                "Config"
+                                            ]
+                                        },
+                                        {
+                                            "Fn::If": [
+                                                "InlineLicense",
+                                                {
+                                                    "Ref": "AWS::NoValue"
+                                                },
+                                                {
+                                                    "Ref": "AWS::NoValue"
+                                                }
+                                            ]
+                                        },
+                                        "--==Boundary==--"
+                                    ]
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "FortiGateVM-az2"
+                    }
+                ]
+            }
+        },
+        "Fgt2Eth1Attachment": {
+            "Type": "AWS::EC2::NetworkInterfaceAttachment",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "Fgt2"
+                },
+                "NetworkInterfaceId": {
+                    "Ref": "Fgt2Eth1"
+                },
+                "DeviceIndex": 1,
+                "DeleteOnTermination": false
+            }
+        },
+        "Fgt1Eip": {
+            "Type": "AWS::EC2::EIP",
+            "DependsOn": "SecurityIgwAttachment",
+            "Properties": {
+                "Domain": "vpc",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "FortiGateVM-az1"
+                    }
+                ]
+            }
+        },
+        "Fgt1EipAssociation": {
+            "Type": "AWS::EC2::EIPAssociation",
+            "DependsOn": "Fgt1",
+            "Properties": {
+                "AllocationId": {
+                    "Fn::GetAtt": [
+                        "Fgt1Eip",
+                        "AllocationId"
+                    ]
+                },
+                "NetworkInterfaceId": {
+                    "Ref": "Fgt1Eth0"
+                }
+            }
+        },
+        "Fgt2Eip": {
+            "Type": "AWS::EC2::EIP",
+            "DependsOn": "SecurityIgwAttachment",
+            "Properties": {
+                "Domain": "vpc",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "FortiGateVM-az2"
+                    }
+                ]
+            }
+        },
+        "Fgt2EipAssociation": {
+            "Type": "AWS::EC2::EIPAssociation",
+            "DependsOn": "Fgt2",
+            "Properties": {
+                "AllocationId": {
+                    "Fn::GetAtt": [
+                        "Fgt2Eip",
+                        "AllocationId"
+                    ]
+                },
+                "NetworkInterfaceId": {
+                    "Ref": "Fgt2Eth0"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "FGT1PublicIP": {
+            "Description": "Public address of the AZ1 FortiGate.",
+            "Value": {
+                "Fn::GetAtt": [
+                    "Fgt1Eip",
+                    "PublicIp"
+                ]
+            }
+        },
+        "FGT2PublicIP": {
+            "Description": "Public address of the AZ2 FortiGate.",
+            "Value": {
+                "Fn::GetAtt": [
+                    "Fgt2Eip",
+                    "PublicIp"
+                ]
+            }
+        },
+        "Username": {
+            "Description": "FortiGate administrator account.",
+            "Value": "admin"
+        },
+        "PasswordForFGT1": {
+            "Description": "Initial admin password for FortiGate 1 - its instance id.",
+            "Value": {
+                "Ref": "Fgt1"
+            }
+        },
+        "PasswordForFGT2": {
+            "Description": "Initial admin password for FortiGate 2 - its instance id.",
+            "Value": {
+                "Ref": "Fgt2"
+            }
+        },
+        "LoadBalancerPrivateIP": {
+            "Description": "GWLB's own interface in AZ1 - the GENEVE remote-ip the FortiGates use.",
+            "Value": {
+                "Fn::GetAtt": [
+                    "GwlbEniLookup",
+                    "Ip1"
+                ]
+            }
+        },
+        "LoadBalancerPrivateIPAz2": {
+            "Description": "GWLB's own interface in AZ1 - the GENEVE remote-ip the FortiGates use.",
+            "Value": {
+                "Fn::GetAtt": [
+                    "GwlbEniLookup",
+                    "Ip2"
+                ]
+            }
+        },
+        "CustomerVPC": {
+            "Description": "Customer VPC id; put test workloads in its private subnets.",
+            "Value": {
+                "Ref": "CustomerVpc"
+            }
+        },
+        "FGTVPC": {
+            "Description": "Security VPC id.",
+            "Value": {
+                "Ref": "SecurityVpc"
+            }
+        },
+        "GwlbEndpointServiceName": {
+            "Description": "Endpoint service name, for attaching further spoke VPCs.",
+            "Value": {
+                "Fn::Sub": "com.amazonaws.vpce.${AWS::Region}.${GwlbEndpointService}"
+            }
+        }
+    }
+}
