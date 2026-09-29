@@ -1,0 +1,94 @@
+[
+  {
+    "ParameterKey": "AZ1",
+    "ParameterValue": "eu-west-1a"
+  },
+  {
+    "ParameterKey": "AZ2",
+    "ParameterValue": "eu-west-1b"
+  },
+  {
+    "ParameterKey": "VpcCidr",
+    "ParameterValue": "10.1.0.0/16"
+  },
+  {
+    "ParameterKey": "PublicCidrAz1",
+    "ParameterValue": "10.1.0.0/24"
+  },
+  {
+    "ParameterKey": "PrivateCidrAz1",
+    "ParameterValue": "10.1.1.0/24"
+  },
+  {
+    "ParameterKey": "PublicCidrAz2",
+    "ParameterValue": "10.1.2.0/24"
+  },
+  {
+    "ParameterKey": "PrivateCidrAz2",
+    "ParameterValue": "10.1.3.0/24"
+  },
+  {
+    "ParameterKey": "CsVpcCidr",
+    "ParameterValue": "20.1.0.0/16"
+  },
+  {
+    "ParameterKey": "CsPublicCidrAz1",
+    "ParameterValue": "20.1.0.0/24"
+  },
+  {
+    "ParameterKey": "CsPrivateCidrAz1",
+    "ParameterValue": "20.1.1.0/24"
+  },
+  {
+    "ParameterKey": "CsPublicCidrAz2",
+    "ParameterValue": "20.1.2.0/24"
+  },
+  {
+    "ParameterKey": "CsPrivateCidrAz2",
+    "ParameterValue": "20.1.3.0/24"
+  },
+  {
+    "ParameterKey": "Arch",
+    "ParameterValue": "arm"
+  },
+  {
+    "ParameterKey": "InstanceType",
+    "ParameterValue": "c6g.xlarge"
+  },
+  {
+    "ParameterKey": "LicenseType",
+    "ParameterValue": "payg"
+  },
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": "REPLACE-WITH-YOUR-EC2-KEYPAIR-NAME"
+  },
+  {
+    "ParameterKey": "AdminSPort",
+    "ParameterValue": "443"
+  },
+  {
+    "ParameterKey": "FortiGateAmiOverride",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "LicenseFormat",
+    "ParameterValue": "file"
+  },
+  {
+    "ParameterKey": "UseS3Bootstrap",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "LicenseSourceBucket",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "LicenseKey1",
+    "ParameterValue": "license1.lic"
+  },
+  {
+    "ParameterKey": "LicenseKey2",
+    "ParameterValue": "license2.lic"
+  }
+]
